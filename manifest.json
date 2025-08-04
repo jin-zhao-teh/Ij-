@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "IJplus",
+  "version": "1.0",
+  "description": "A Chrome Extension with enhanced UX features.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "type": "module"
+    }
+  ],
+  "permissions": ["scripting", "storage", "activeTab", "identity"],
+  "host_permissions": ["*://*/*"],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*", "components/*", "scripts/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "oauth2": {
+    "client_id": "246843546913-ipt4k83gtha69ru8gq7359nqrhfe36ug.apps.googleusercontent.com",
+    "scopes": ["email", "profile"]
+  }
+}

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam-Style Overlay Extension</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background: url('https://images.unsplash.com/photo-1531297484001-80022131f5a1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        
+        /* Overlay container */
+        #overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #overlay-container.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(15, 15, 25, 0.95);
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(100, 100, 255, 0.15);
+            height: 90vh;
+            margin-top: 5vh;
+        }
+        
+        header {
+            background: rgba(10, 10, 20, 0.95);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(80, 120, 255, 0.2);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(80, 120, 255, 0.2);
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 0;
+            background: rgba(40, 40, 70, 0.7);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            color: #e0e0e0;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            background: rgba(60, 80, 150, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: rgba(80, 120, 255, 0.3);
+        }
+        
+        .main-content {
+            display: flex;
+            height: calc(90vh - 120px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: rgba(20, 20, 35, 0.9);
+            border-right: 1px solid rgba(80, 120, 255, 0.1);
+            padding: 20px 0;
+        }
+        
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background: rgba(50, 50, 90, 0.4);
+        }
+        
+        .nav-item.active {
+            background: rgba(40, 40, 80, 0.6);
+            border-left: 4px solid rgba(80, 120, 255, 0.5);
+        }
+        
+        .nav-item i {
+            width: 24px;
+            text-align: center;
+            color: rgba(80, 120, 255, 0.8);
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            background: rgba(25, 25, 40, 0.7);
+            overflow-y: auto;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tab-header {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .tab-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+        
+        .executor-container {
+            background: rgba(15, 15, 25, 0.8);
+            border-radius: 0;
+            overflow: hidden;
+            border: 1px solid rgba(80, 120, 255, 0.2);
+        }
+        
+        .code-editor {
+            width: 100%;
+            height: 300px;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            border: none;
+            resize: none;
+            outline: none;
+        }
+        
+        .code-toolbar {
+            display: flex;
+            padding: 15px;
+            background: rgba(20, 20, 35, 0.9);
+            gap: 10px;
+            border-top: 1px solid rgba(80, 120, 255, 0.1);
+        }
+        
+        .console-output {
+            background: #0d1117;
+            border-radius: 0;
+            padding: 20px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            margin-top: 20px;
+            border: 1px solid rgba(80, 120, 255, 0.2);
+        }
+        
+        .console-line {
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            border-radius: 0;
+        }
+        
+        .console-line.info {
+            background: rgba(30, 100, 200, 0.1);
+            border-left: 3px solid rgba(80, 120, 255, 0.5);
+        }
+        
+        .console-line.success {
+            background: rgba(30, 200, 100, 0.1);
+            border-left: 3px solid rgba(76, 175, 80, 0.5);
+        }
+        
+        .console-line.error {
+            background: rgba(200, 50, 50, 0.1);
+            border-left: 3px solid rgba(244, 67, 54, 0.5);
+        }
+        
+        .console-line.warning {
+            background: rgba(200, 150, 0, 0.1);
+            border-left: 3px solid rgba(255, 152, 0, 0.5);
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .setting-card {
+            background: rgba(20, 20, 35, 0.8);
+            border-radius: 0;
+            padding: 20px;
+            border: 1px solid rgba(80, 120, 255, 0.1);
+        }
+        
+        .setting-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .setting-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(80, 120, 255, 0.2);
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: rgba(80, 120, 255, 0.8);
+        }
+        
+        .setting-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .setting-content {
+            margin-top: 15px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 0;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 0;
+        }
+        
+        input:checked + .slider {
+            background: rgba(80, 120, 255, 0.5);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .notification-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1000;
+        }
+        
+        .notification {
+            background: rgba(20, 25, 40, 0.95);
+            border-left: 4px solid rgba(80, 120, 255, 0.5);
+            padding: 15px 20px;
+            border-radius: 0;
+            width: 320px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateX(100%);
+            opacity: 0;
+            animation: slideIn 0.3s forwards, fadeOut 0.5s forwards 3s;
+            backdrop-filter: blur(5px);
+            border-top: 1px solid rgba(100, 150, 255, 0.2);
+        }
+        
+        .notification.success {
+            border-left-color: rgba(76, 175, 80, 0.5);
+        }
+        
+        .notification.error {
+            border-left-color: rgba(244, 67, 54, 0.5);
+        }
+        
+        .notification.warning {
+            border-left-color: rgba(255, 152, 0, 0.5);
+        }
+        
+        .notification-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .notification-icon {
+            font-size: 18px;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .notification-content {
+            font-size: 14px;
+            color: #a0a0c0;
+        }
+        
+        @keyframes slideIn {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+            }
+        }
+        
+        .placeholder-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px;
+            background: rgba(20, 20, 35, 0.5);
+            border-radius: 0;
+            border: 1px dashed rgba(80, 120, 255, 0.3);
+            min-height: 300px;
+        }
+        
+        .placeholder-icon {
+            font-size: 48px;
+            color: rgba(80, 120, 255, 0.5);
+            margin-bottom: 20px;
+        }
+        
+        .placeholder-text {
+            color: #a0a0c0;
+            max-width: 400px;
+        }
+        
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .module-card {
+            background: rgba(20, 20, 35, 0.8);
+            border-radius: 0;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(80, 120, 255, 0.1);
+        }
+        
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border-color: rgba(80, 120, 255, 0.3);
+        }
+        
+        .module-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: rgba(80, 120, 255, 0.8);
+        }
+        
+        .module-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .module-desc {
+            color: #a0a0c0;
+            font-size: 14px;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 25px;
+            background: rgba(10, 10, 20, 0.95);
+            border-top: 1px solid rgba(80, 120, 255, 0.1);
+            font-size: 14px;
+            color: #a0a0c0;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 0;
+            background: rgba(76, 175, 80, 0.5);
+        }
+        
+        .url-list {
+            background: rgba(15, 15, 25, 0.8);
+            border-radius: 0;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .url-item {
+            padding: 10px;
+            background: rgba(30, 30, 50, 0.5);
+            margin-bottom: 8px;
+            border-radius: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .url-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .url-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .url-actions button {
+            background: none;
+            border: none;
+            color: #a0a0c0;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .url-actions button:hover {
+            color: #e0e0e0;
+        }
+        
+        .add-url {
+            display: flex;
+            margin-top: 15px;
+            gap: 10px;
+        }
+        
+        .add-url input {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(30, 30, 50, 0.5);
+            border: 1px solid rgba(80, 120, 255, 0.2);
+            border-radius: 0;
+            color: #e0e0e0;
+        }
+        
+        .add-url button {
+            background: rgba(80, 120, 255, 0.3);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 0;
+            cursor: pointer;
+        }
+        
+        #toggle-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(80, 120, 255, 0.3);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #toggle-overlay:hover {
+            background: rgba(80, 120, 255, 0.5);
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+        }
+        
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid rgba(80, 120, 255, 0.3);
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loader"></div>
+        <h2>Initializing Overlay Extension</h2>
+        <p id="loading-status">Checking version...</p>
+    </div>
+    
+    <!-- Toggle overlay button -->
+    <button id="toggle-overlay">
+        <i class="fas fa-bolt"></i>
+    </button>
+    
+    <!-- Overlay container -->
+    <div id="overlay-container">
+        <div class="container">
+            <header>
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="logo-text">OverlayX</div>
+                </div>
+                <div class="controls">
+                    <button class="btn">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                    <button class="btn btn-primary" id="close-overlay">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </header>
+            
+            <div class="main-content">
+                <div class="sidebar">
+                    <div class="nav-item active" data-tab="dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </div>
+                    <div class="nav-item" data-tab="reading">
+                        <i class="fas fa-book-reader"></i>
+                        <span>Reading Plus</span>
+                    </div>
+                    <div class="nav-item" data-tab="math">
+                        <i class="fas fa-calculator"></i>
+                        <span>MathBuddy</span>
+                    </div>
+                    <div class="nav-item" data-tab="ludi">
+                        <i class="fas fa-gamepad"></i>
+                        <span>Ludi</span>
+                    </div>
+                    <div class="nav-item" data-tab="executor">
+                        <i class="fas fa-terminal"></i>
+                        <span>Executor</span>
+                    </div>
+                    <div class="nav-item" data-tab="console">
+                        <i class="fas fa-code"></i>
+                        <span>Console</span>
+                    </div>
+                    <div class="nav-item" data-tab="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </div>
+                </div>
+                
+                <div class="content-area">
+                    <!-- Dashboard -->
+                    <div class="tab-content active" id="dashboard">
+                        <div class="tab-header">
+                            <div class="tab-title">Dashboard</div>
+                            <div class="btn">View Stats <i class="fas fa-chart-line"></i></div>
+                        </div>
+                        
+                        <div class="module-grid">
+                            <div class="module-card">
+                                <div class="module-icon">
+                                    <i class="fas fa-book-reader"></i>
+                                </div>
+                                <div class="module-title">Reading Plus</div>
+                                <div class="module-desc">Enhance your reading experience with advanced tools</div>
+                                <button class="btn" style="margin-top: 15px; width: 100%;">Activate</button>
+                            </div>
+                            
+                            <div class="module-card">
+                                <div class="module-icon">
+                                    <i class="fas fa-calculator"></i>
+                                </div>
+                                <div class="module-title">MathBuddy</div>
+                                <div class="module-desc">Solve complex math problems with step-by-step solutions</div>
+                                <button class="btn" style="margin-top: 15px; width: 100%;">Activate</button>
+                            </div>
+                            
+                            <div class="module-card">
+                                <div class="module-icon">
+                                    <i class="fas fa-gamepad"></i>
+                                </div>
+                                <div class="module-title">Ludi</div>
+                                <div class="module-desc">Game enhancement tools for better performance</div>
+                                <button class="btn" style="margin-top: 15px; width: 100%;">Activate</button>
+                            </div>
+                            
+                            <div class="module-card">
+                                <div class="module-icon">
+                                    <i class="fas fa-terminal"></i>
+                                </div>
+                                <div class="module-title">Executor</div>
+                                <div class="module-desc">Run custom scripts and automate tasks</div>
+                                <button class="btn" style="margin-top: 15px; width: 100%;">Activate</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reading Plus -->
+                    <div class="tab-content" id="reading">
+                        <div class="tab-header">
+                            <div class="tab-title">Reading Plus</div>
+                            <div class="btn"><i class="fas fa-download"></i> Import Content</div>
+                        </div>
+                        
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">
+                                <i class="fas fa-book-reader"></i>
+                            </div>
+                            <h3>Reading Enhancement Module</h3>
+                            <p class="placeholder-text">This module provides tools to improve reading comprehension, vocabulary enhancement, and reading speed analysis.</p>
+                            <button class="btn" style="margin-top: 20px;">Connect Platform</button>
+                        </div>
+                    </div>
+                    
+                    <!-- MathBuddy -->
+                    <div class="tab-content" id="math">
+                        <div class="tab-header">
+                            <div class="tab-title">MathBuddy</div>
+                            <div class="btn"><i class="fas fa-camera"></i> Scan Problem</div>
+                        </div>
+                        
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <h3>Mathematics Assistant</h3>
+                            <p class="placeholder-text">Solve equations, plot graphs, and get step-by-step solutions to complex math problems.</p>
+                            <button class="btn" style="margin-top: 20px;">Open Math Editor</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Ludi -->
+                    <div class="tab-content" id="ludi">
+                        <div class="tab-header">
+                            <div class="tab-title">Ludi</div>
+                            <div class="btn"><i class="fas fa-sliders-h"></i> Optimize</div>
+                        </div>
+                        
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">
+                                <i class="fas fa-gamepad"></i>
+                            </div>
+                            <h3>Gaming Enhancement Suite</h3>
+                            <p class="placeholder-text">Boost your gaming experience with FPS optimization, key remapping, and performance overlays.</p>
+                            <button class="btn" style="margin-top: 20px;">Scan Installed Games</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Executor -->
+                    <div class="tab-content" id="executor">
+                        <div class="tab-header">
+                            <div class="tab-title">Executor</div>
+                            <div class="btn"><i class="fas fa-folder-open"></i> Load Script</div>
+                        </div>
+                        
+                        <div class="executor-container">
+                            <textarea class="code-editor" id="code-input">// Welcome to the Executor
+// Type or paste your code here
+
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+
+// Example function call
+const message = greet("Developer");
+console.log(message);
+
+// Execute script with Ctrl+Enter</textarea>
+                            <div class="code-toolbar">
+                                <button class="btn" id="execute-btn"><i class="fas fa-play"></i> Execute</button>
+                                <button class="btn"><i class="fas fa-trash"></i> Clear</button>
+                                <button class="btn"><i class="fas fa-save"></i> Save</button>
+                                <button class="btn"><i class="fas fa-folder"></i> Load</button>
+                                <button class="btn" style="margin-left: auto;"><i class="fas fa-bolt"></i> Attach Process</button>
+                            </div>
+                        </div>
+                        
+                        <div class="console-output" id="executor-console">
+                            <div class="console-line info">[INFO] Executor initialized - Ready to run scripts</div>
+                            <div class="console-line success">[SUCCESS] Script 'utils.js' loaded successfully</div>
+                            <div class="console-line warning">[WARNING] No target process attached - Running in sandbox mode</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Console -->
+                    <div class="tab-content" id="console">
+                        <div class="tab-header">
+                            <div class="tab-title">System Console</div>
+                            <div class="btn"><i class="fas fa-trash"></i> Clear Logs</div>
+                        </div>
+                        
+                        <div class="console-output" style="height: 500px;">
+                            <div class="console-line info">[INFO] Overlay system initialized successfully</div>
+                            <div class="console-line success">[SUCCESS] MathBuddy module activated</div>
+                            <div class="console-line info">[INFO] Reading Plus connected to platform API</div>
+                            <div class="console-line warning">[WARNING] GPU acceleration not available - Using software rendering</div>
+                            <div class="console-line info">[INFO] Executor sandbox environment ready</div>
+                            <div class="console-line error">[ERROR] Failed to connect to Ludi service - Retrying in 5s...</div>
+                            <div class="console-line success">[SUCCESS] User preferences loaded from cloud</div>
+                            <div class="console-line info">[INFO] Security protocols enabled</div>
+                            <div class="console-line info">[INFO] System resources: CPU 42%, RAM 680MB</div>
+                            <div class="console-line success">[SUCCESS] Ludi connection established</div>
+                            <div class="console-line info">[INFO] All modules operational</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings -->
+                    <div class="tab-content" id="settings">
+                        <div class="tab-header">
+                            <div class="tab-title">System Settings</div>
+                            <div class="btn"><i class="fas fa-cloud-upload-alt"></i> Sync Settings</div>
+                        </div>
+                        
+                        <div class="settings-grid">
+                            <div class="setting-card">
+                                <div class="setting-header">
+                                    <div class="setting-icon">
+                                        <i class="fas fa-eye"></i>
+                                    </div>
+                                    <div class="setting-title">Appearance</div>
+                                </div>
+                                <div class="setting-content">
+                                    <div style="margin-bottom: 15px;">
+                                        <label>Theme</label>
+                                        <select style="width: 100%; padding: 10px; margin-top: 8px; background: rgba(30, 30, 50, 0.5); border: 1px solid rgba(80, 120, 255, 0.2); color: #e0e0e0;">
+                                            <option>Dark (Default)</option>
+                                            <option>Dark Blue</option>
+                                            <option>Midnight Purple</option>
+                                            <option>OLED Black</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label>Transparency</label>
+                                        <div style="width: 60%;">
+                                            <input type="range" min="0" max="100" value="85" style="width: 100%;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-card">
+                                <div class="setting-header">
+                                    <div class="setting-icon">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </div>
+                                    <div class="setting-title">Security</div>
+                                </div>
+                                <div class="setting-content">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <label>Enable sandbox mode</label>
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <label>Require password for execution</label>
+                                        <label class="switch">
+                                            <input type="checkbox">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label>Auto-update scripts</label>
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-card">
+                                <div class="setting-header">
+                                    <div class="setting-icon">
+                                        <i class="fas fa-plug"></i>
+                                    </div>
+                                    <div class="setting-title">Integration</div>
+                                </div>
+                                <div class="setting-content">
+                                    <div style="margin-bottom: 15px;">
+                                        <label>Default attach method</label>
+                                        <select style="width: 100%; padding: 10px; margin-top: 8px; background: rgba(30, 30, 50, 0.5); border: 1px solid rgba(80, 120, 255, 0.2); color: #e0e0e0;">
+                                            <option>Auto-inject (Recommended)</option>
+                                            <option>Manual injection</option>
+                                            <option>DLL injection</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label>Enable browser extension</label>
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-card">
+                                <div class="setting-header">
+                                    <div class="setting-icon">
+                                        <i class="fas fa-ban"></i>
+                                    </div>
+                                    <div class="setting-title">Excluded Websites</div>
+                                </div>
+                                <div class="setting-content">
+                                    <p>Overlay will not appear on these websites:</p>
+                                    
+                                    <div class="url-list">
+                                        <div class="url-item">
+                                            https://onlinebanking.example.com
+                                            <div class="url-actions">
+                                                <button><i class="fas fa-edit"></i></button>
+                                                <button><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <div class="url-item">
+                                            https://secure.workportal.com
+                                            <div class="url-actions">
+                                                <button><i class="fas fa-edit"></i></button>
+                                                <button><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        <div class="url-item">
+                                            https://company-intranet.local
+                                            <div class="url-actions">
+                                                <button><i class="fas fa-edit"></i></button>
+                                                <button><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="add-url">
+                                        <input type="text" placeholder="https://example.com">
+                                        <button>Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator"></div>
+                    <span>System Status: Operational</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-microchip"></i>
+                    <span>CPU: 12% | RAM: 420MB</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-plug"></i>
+                    <span>Attached: None</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-user"></i>
+                    <span>User: developer@overlayx.com</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification-container" id="notification-container">
+        <!-- Notifications will be added here dynamically -->
+    </div>
+    
+    <script>
+        // Simulate extension initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Simulate version check
+            setTimeout(() => {
+                document.getElementById('loading-status').textContent = "Version 1.4.2 verified";
+                
+                // Simulate loading modules
+                setTimeout(() => {
+                    document.getElementById('loading-status').textContent = "Loading executor module...";
+                    
+                    setTimeout(() => {
+                        document.getElementById('loading-status').textContent = "Initializing UI components...";
+                        
+                        setTimeout(() => {
+                            document.getElementById('loading-screen').style.display = 'none';
+                            
+                            // Show welcome notification
+                            showNotification('OverlayX Initialized', 'Extension is ready. Press F7 to toggle overlay.', 'success');
+                        }, 1000);
+                    }, 1000);
+                }, 1000);
+            }, 1500);
+            
+            // Tab navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Remove active class from all items
+                    document.querySelectorAll('.nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked item
+                    this.classList.add('active');
+                    
+                    // Hide all tab contents
+                    document.querySelectorAll('.tab-content').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    
+                    // Show selected tab content
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Overlay toggle functionality
+            const overlayContainer = document.getElementById('overlay-container');
+            const toggleButton = document.getElementById('toggle-overlay');
+            const closeButton = document.getElementById('close-overlay');
+            
+            toggleButton.addEventListener('click', () => {
+                overlayContainer.classList.add('active');
+            });
+            
+            closeButton.addEventListener('click', () => {
+                overlayContainer.classList.remove('active');
+            });
+            
+            // Keyboard shortcut (F7) to toggle overlay
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F7') {
+                    overlayContainer.classList.toggle('active');
+                }
+            });
+            
+            // Execute code functionality
+            const executeBtn = document.getElementById('execute-btn');
+            const executorConsole = document.getElementById('executor-console');
+            
+            executeBtn.addEventListener('click', function() {
+                const code = document.getElementById('code-input').value;
+                if (code.trim() !== '') {
+                    showNotification('Code Executed', 'Script ran successfully with no errors', 'success');
+                    
+                    // Add to console
+                    const newEntry = document.createElement('div');
+                    newEntry.className = 'console-line success';
+                    newEntry.textContent = '[SUCCESS] Script executed - Output: "Hello, Developer!"';
+                    executorConsole.appendChild(newEntry);
+                    executorConsole.scrollTop = executorConsole.scrollHeight;
+                } else {
+                    showNotification('Execution Failed', 'No code to execute', 'error');
+                }
+            });
+            
+            // Simulate resource usage updates
+            setInterval(() => {
+                const cpu = Math.floor(Math.random() * 20) + 5;
+                const ram = Math.floor(Math.random() * 200) + 400;
+                document.querySelector('.status-item:nth-child(2) span').textContent = 
+                    `CPU: ${cpu}% | RAM: ${ram}MB`;
+            }, 3000);
+        });
+        
+        // Show notification
+        function showNotification(title, content, type = 'info') {
+            const icons = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '❌'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div class="notification-header">
+                    <div class="notification-icon">${icons[type]}</div>
+                    <div class="notification-title">${title}</div>
+                </div>
+                <div class="notification-content">${content}</div>
+            `;
+            
+            const container = document.getElementById('notification-container');
+            container.appendChild(notification);
+            
+            // Remove notification after animation
+            setTimeout(() => {
+                notification.remove();
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
