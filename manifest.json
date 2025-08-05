@@ -21,7 +21,7 @@
   "host_permissions": ["*://*/*"],
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "components/*", "scripts/*"],
+      "resources": ["assets/*", "components/*", "scripts/*", "tabs/*.html"],
       "matches": ["<all_urls>"]
     }
   ],

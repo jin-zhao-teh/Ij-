@@ -1,10 +1,29 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'getRank') {
-    chrome.storage.local.get('userRank', (result) => {
-      // result is an object, e.g. { userRank: 'some string' }
-      sendResponse({ result: result.userRank || '' });
+  if (request.type === "getRank") {
+    chrome.storage.local.get("userRank", (result) => {
+      sendResponse({ result: result.userRank || "" });
     });
-    // Return true to indicate you will send response asynchronously
+    return true;
+  } else if (request.action === "injectScript") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs.length) {
+        sendResponse({ error: "No active tab found" });
+        return;
+      }
+      chrome.scripting.executeScript(
+        {
+          target: { tabId: tabs[0].id },
+          files: [request.file],
+        },
+        (results) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ error: chrome.runtime.lastError.message });
+            return;
+          }
+          sendResponse({ results });
+        }
+      );
+    });
     return true;
   }
 });

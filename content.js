@@ -2,7 +2,7 @@ const STORAGE_KEY = "IJplus-version-check-date";
 const LOCAL_VERSION = chrome.runtime.getManifest().version;
 const LOCAL_KEY = "";
 const OVERLAY_ID = "ijplus-steam-overlay";
-let Rank = ""
+let Rank = "";
 function isNewerVersion(latest, current) {
   const a = latest.split(".").map(Number);
   const b = current.split(".").map(Number);
@@ -13,16 +13,59 @@ function isNewerVersion(latest, current) {
   return false;
 }
 //send request to background to get Rank
-chrome.runtime.sendMessage({ type: 'getRank' }, (response) => {
+chrome.runtime.sendMessage({ type: "getRank" }, (response) => {
   if (response && response.result) {
-    Rank = response.result
+    Rank = response.result;
   }
 });
-
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
+window.fetch = function (url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const method = options.method || "GET";
+
+    xhr.open(method, url, true);
+
+    // Set headers if provided
+    if (options.headers) {
+      for (const key in options.headers) {
+        xhr.setRequestHeader(key, options.headers[key]);
+      }
+    }
+
+    xhr.responseType = "text"; // Default, you can change this if needed
+
+    xhr.onload = function () {
+      const response = {
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        statusText: xhr.statusText,
+        text: () => Promise.resolve(xhr.responseText),
+        json: () => {
+          try {
+            return Promise.resolve(JSON.parse(xhr.responseText));
+          } catch (err) {
+            return Promise.reject(err);
+          }
+        },
+      };
+      resolve(response);
+    };
+
+    xhr.onerror = function () {
+      reject(new TypeError("Network request failed"));
+    };
+
+    xhr.ontimeout = function () {
+      reject(new TypeError("Network request timed out"));
+    };
+
+    xhr.send(options.body || null);
+  });
+};
 
 function checkVersionWithXHR() {
   return new Promise((resolve, reject) => {
@@ -43,6 +86,23 @@ function checkVersionWithXHR() {
     };
 
     xhr.send();
+  });
+}
+
+function runScript(localFileName) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      { action: "injectScript", file: localFileName },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (response.error) {
+          reject(new Error(response.error));
+        } else {
+          resolve(response.results);
+        }
+      }
+    );
   });
 }
 
@@ -346,9 +406,9 @@ function createOverlay() {
       Object.assign(runBtn.style, buttonStyle("#2ecc71"));
       runBtn.onclick = () => {
         try {
-          const script = document.createElement("script")
-          script.innerHTML = codeArea.value
-          document.body.append(script)
+          const script = document.createElement("script");
+          script.innerHTML = codeArea.value;
+          document.body.append(script);
           showNotification({
             title: "Executor",
             message: "Executed successfully",
@@ -404,6 +464,213 @@ function createOverlay() {
       contentPanel.appendChild(title);
       contentPanel.appendChild(consoleOutput);
       contentPanel.appendChild(clearBtn);
+    } else if (tab === "Reading Plus") {
+      // Create main title
+      const title = document.createElement("h2");
+      title.textContent = "Reading Plus Tools";
+      title.style.color = "#2e86de";
+      title.style.marginBottom = "20px";
+      contentPanel.appendChild(title);
+
+      // Create rank indicator
+      const rankIndicator = document.createElement("div");
+      rankIndicator.textContent = `Your Rank: ${Rank}`;
+      rankIndicator.style.color = "#aaa";
+      rankIndicator.style.marginBottom = "15px";
+      contentPanel.appendChild(rankIndicator);
+
+      // Create sections container
+      const sectionsContainer = document.createElement("div");
+      sectionsContainer.style.display = "flex";
+      sectionsContainer.style.flexDirection = "column";
+      sectionsContainer.style.gap = "25px";
+      contentPanel.appendChild(sectionsContainer);
+
+      // Helper function to create buttons
+      function createButton(text, color, onClick) {
+        const button = document.createElement("button");
+        button.textContent = text;
+        Object.assign(button.style, {
+          backgroundColor: color,
+          color: "white",
+          border: "none",
+          padding: "8px 16px",
+          fontSize: "14px",
+          cursor: "pointer",
+          borderRadius: "4px",
+          transition: "all 0.2s",
+          minWidth: "150px",
+        });
+        button.addEventListener("mouseover", () => {
+          button.style.opacity = "0.9";
+          button.style.transform = "translateY(-2px)";
+        });
+        button.addEventListener("mouseout", () => {
+          button.style.opacity = "1";
+          button.style.transform = "translateY(0)";
+        });
+        button.addEventListener("click", onClick);
+        return button;
+      }
+
+      // Helper function to create sections
+      function createSection(title, subtitle = null) {
+        const section = document.createElement("div");
+
+        const sectionTitle = document.createElement("h3");
+        sectionTitle.textContent = title;
+        sectionTitle.style.color = "#2ecc71";
+        sectionTitle.style.marginBottom = "8px";
+        section.appendChild(sectionTitle);
+
+        if (subtitle) {
+          const sectionSubtitle = document.createElement("div");
+          sectionSubtitle.textContent = subtitle;
+          sectionSubtitle.style.color = "#aaa";
+          sectionSubtitle.style.fontSize = "12px";
+          sectionSubtitle.style.marginBottom = "12px";
+          section.appendChild(sectionSubtitle);
+        }
+
+        const buttonContainer = document.createElement("div");
+        buttonContainer.style.display = "flex";
+        buttonContainer.style.flexWrap = "wrap";
+        buttonContainer.style.gap = "10px";
+        section.appendChild(buttonContainer);
+
+        return { section, buttonContainer };
+      }
+
+      // SeeReader Section (available for all ranks)
+      const { section: seeReaderSection, buttonContainer: seeReaderButtons } =
+        createSection("SeeReader");
+      sectionsContainer.appendChild(seeReaderSection);
+
+      // Copy Question button (all ranks)
+      seeReaderButtons.appendChild(
+        createButton("Copy Question", "#3498db", () => {
+          runScript("scripts/ReadingPlus/CopyQuestion.js")
+            .then((result) => {
+              showNotification({
+                title: "SeeReader",
+                message: "Question copied to clipboard",
+              });
+            })
+            .catch((error) => {
+              showNotification({
+                title: "IjPlus",
+                message: "Failed to run script:" + error,
+              });
+            });
+        })
+      );
+
+      // Copy Story button (emerald+)
+      if (["emerald", "diamond", "platinum"].includes(Rank.toLowerCase())) {
+        seeReaderButtons.appendChild(
+          createButton("Copy Story", "#3498db", () => {
+            showNotification({
+              title: "SeeReader",
+              message: "Story copied to clipboard",
+            });
+            runScript("scripts/ReadingPlus/CopyStory.js")
+              .then((result) => {
+                showNotification({
+                  title: "SeeReader",
+                  message: "Copied Story to Clipboard",
+                });
+              })
+              .catch((error) => {
+                showNotification({
+                  title: "IjPlus",
+                  message: "Failed to run script:" + error,
+                });
+              });
+          })
+        );
+      }
+
+      // Ibalance Section (silver+)
+      if (!["bronze"].includes(Rank.toLowerCase())) {
+        const { section: ibalanceSection, buttonContainer: ibalanceButtons } =
+          createSection("Ibalance", "Flash");
+        sectionsContainer.appendChild(ibalanceSection);
+
+        ibalanceButtons.appendChild(
+          createButton("Complete Flash", "#e67e22", () => {
+            runScript("scripts/ReadingPlus/CompleteFlash.js")
+              .then((result) => {
+                showNotification({
+                  title: "Ibalance - Flash",
+                  message: "Completing Flash, Press the Space key twice",
+                });
+              })
+              .catch((error) => {
+                showNotification({
+                  title: "IjPlus",
+                  message: "Failed to run script:" + error,
+                });
+              });
+          })
+        );
+      }
+
+      // Scan Section (gold+)
+      if (
+        ["gold", "emerald", "diamond", "platinum"].includes(Rank.toLowerCase())
+      ) {
+        const { section: scanSection, buttonContainer: scanButtons } =
+          createSection("Scan");
+        sectionsContainer.appendChild(scanSection);
+
+        scanButtons.appendChild(
+          createButton("Complete Scan", "#9b59b6", () => {
+            showNotification({ title: "Scan", message: "Scan completed" });
+            // Actual implementation would go here
+          })
+        );
+      }
+
+      // Complete All button (platinum only)
+      if (["platinum"].includes(Rank.toLowerCase())) {
+        const completeAllSection = document.createElement("div");
+        completeAllSection.style.marginTop = "20px";
+        completeAllSection.style.paddingTop = "20px";
+        completeAllSection.style.borderTop = "1px solid #333";
+
+        const completeAllButton = createButton(
+          "Complete All",
+          "#e74c3c",
+          () => {
+            showNotification({
+              title: "Reading Plus",
+              message: "All activities completed",
+            });
+            // Actual implementation would go here
+          }
+        );
+        completeAllButton.style.width = "100%";
+        completeAllButton.style.padding = "12px";
+        completeAllButton.style.fontSize = "16px";
+
+        completeAllSection.appendChild(completeAllButton);
+        sectionsContainer.appendChild(completeAllSection);
+      }
+
+      // Info message for unsupported ranks
+      if (["bronze"].includes(Rank.toLowerCase())) {
+        const info = document.createElement("div");
+        info.innerHTML = `<div style="color:#888; margin-top:20px; font-size:12px;">
+                Upgrade to higher rank for more features:
+                <ul style="margin-top:8px; padding-left:20px;">
+                    <li>Silver: Ibalance tools</li>
+                    <li>Gold: Scan tools</li>
+                    <li>Emerald: Copy Story</li>
+                    <li>Platinum: Complete All</li>
+                </ul>
+            </div>`;
+        sectionsContainer.appendChild(info);
+      }
     } else {
       const title = document.createElement("div");
       title.textContent = tab;
@@ -439,8 +706,8 @@ function createOverlay() {
   window.addEventListener("keydown", (e) => {
     if (e.key === "F8") {
       if (!Rank) {
-        showNotification({title:"IjPlus",message:"No Subsription"})
-        return
+        showNotification({ title: "IjPlus", message: "No Subsription" });
+        return;
       }
       overlay.style.display =
         overlay.style.display === "none" ? "block" : "none";
@@ -517,6 +784,7 @@ function createOverlay() {
       setTimeout(() => notif.remove(), 300);
     }, 4000);
   };
+  window.overlay = overlay;
 }
 
 // Run version check and initialize overlay + notification
@@ -530,6 +798,6 @@ showNotification({ title: "Ijplus", message: "Loading Scripts" });
 if (Rank) {
   showNotification({
     title: "Ijplus",
-    message: "IJplus Overlay initialized. Press F7 to toggle.",
+    message: "IJplus Overlay initialized. Press F8 to toggle.",
   });
 }

@@ -1,0 +1,198 @@
+<div id="reading-plus-container" style="font-family: monospace; color: #ccc">
+  <h2 style="color: #2e86de">Reading Plus</h2>
+  <div id="reading-plus-content">Loading tools based on your rank...</div>
+</div>
+
+<script>
+  (function () {
+    const allowedRanks = [
+      "bronze",
+      "silver",
+      "gold",
+      "emerald",
+      "diamond",
+      "platinum",
+    ];
+    const toolsByRank = {
+      bronze: [
+        { section: "SeeReader", title: true, buttons: ["Copy Question"] },
+      ],
+      silver: [
+        { section: "SeeReader", title: true, buttons: ["Copy Question"] },
+        {
+          section: "Ibalance",
+          title: true,
+          buttons: ["Complete Flash"],
+          subtitle: "Flash",
+        },
+      ],
+      gold: [
+        { section: "SeeReader", title: true, buttons: ["Copy Question"] },
+        {
+          section: "Ibalance",
+          title: true,
+          buttons: ["Complete Flash"],
+          subtitle: "Flash",
+        },
+        {
+          section: "Scan",
+          title: false,
+          buttons: ["Complete Scan."],
+          subtitle: "Scan",
+        },
+      ],
+      emerald: [
+        {
+          section: "SeeReader",
+          title: true,
+          buttons: ["Copy Question", "Copy Story"],
+        },
+        {
+          section: "Ibalance",
+          title: true,
+          buttons: ["Complete Flash"],
+          subtitle: "Flash",
+        },
+        {
+          section: "Scan",
+          title: false,
+          buttons: ["Complete Scan."],
+          subtitle: "Scan",
+        },
+      ],
+      diamond: [
+        {
+          section: "SeeReader",
+          title: true,
+          buttons: ["Copy Question", "Copy Story"],
+        },
+        {
+          section: "Ibalance",
+          title: true,
+          buttons: ["Complete Flash"],
+          subtitle: "Flash",
+        },
+        {
+          section: "Scan",
+          title: false,
+          buttons: ["Complete Scan."],
+          subtitle: "Scan",
+        },
+      ],
+      platinum: [
+        {
+          section: "SeeReader",
+          title: true,
+          buttons: ["Copy Question", "Copy Story"],
+        },
+        {
+          section: "Ibalance",
+          title: true,
+          buttons: ["Complete Flash"],
+          subtitle: "Flash",
+        },
+        {
+          section: "Scan",
+          title: false,
+          buttons: ["Complete Scan."],
+          subtitle: "Scan",
+        },
+        { section: "Complete All", title: false, buttons: ["Complete All"] },
+      ],
+    };
+
+    function renderSection(
+      sectionName,
+      buttons,
+      isTitle = false,
+      subtitle = null
+    ) {
+      const container = document.createElement("div");
+      container.style.marginBottom = "20px";
+
+      if (isTitle) {
+        const title = document.createElement("h3");
+        title.textContent = sectionName + (subtitle ? ` (${subtitle})` : "");
+        title.style.color = "#2ecc71";
+        container.appendChild(title);
+      } else if (subtitle) {
+        const sub = document.createElement("div");
+        sub.textContent = `${subtitle}:`;
+        sub.style.fontWeight = "bold";
+        sub.style.marginBottom = "6px";
+        container.appendChild(sub);
+      }
+
+      const btnGroup = document.createElement("div");
+      btnGroup.style.display = "flex";
+      btnGroup.style.flexWrap = "wrap";
+      btnGroup.style.gap = "10px";
+
+      buttons.forEach((btnLabel) => {
+        const btn = document.createElement("button");
+        btn.textContent = btnLabel;
+        Object.assign(btn.style, {
+          background: "#2e86de",
+          border: "none",
+          color: "white",
+          padding: "6px 12px",
+          cursor: "pointer",
+          borderRadius: "4px",
+          fontSize: "14px",
+        });
+
+        btn.addEventListener("click", () => {
+          showNotification({
+            title: "Reading Plus",
+            message: `Clicked "${btnLabel}"`,
+          });
+
+          // TODO: Add real logic here for each button action
+          console.log(`[ReadingPlus] ${btnLabel} clicked`);
+        });
+
+        btnGroup.appendChild(btn);
+      });
+
+      container.appendChild(btnGroup);
+      return container;
+    }
+
+    function loadReadingPlusUI() {
+      const content = document.getElementById("reading-plus-content");
+      content.innerHTML = "";
+
+      const rank = (window.Rank || "").toLowerCase();
+
+      if (!allowedRanks.includes(rank)) {
+        content.innerHTML = `<div style="color:red;">No valid subscription rank found.</div>`;
+        return;
+      }
+
+      const sections = toolsByRank[rank];
+      sections.forEach((tool) => {
+        const sectionEl = renderSection(
+          tool.section,
+          tool.buttons,
+          tool.title,
+          tool.subtitle || null
+        );
+        content.appendChild(sectionEl);
+      });
+    }
+
+    // Wait for Rank to load (since it's async)
+    function waitForRankAndInit(attempts = 0) {
+      if (window.Rank && allowedRanks.includes(window.Rank.toLowerCase())) {
+        loadReadingPlusUI();
+      } else if (attempts < 20) {
+        setTimeout(() => waitForRankAndInit(attempts + 1), 100);
+      } else {
+        document.getElementById("reading-plus-content").innerHTML =
+          "<div style='color:red;'>Failed to load Rank.</div>";
+      }
+    }
+
+    waitForRankAndInit();
+  })();
+</script>
