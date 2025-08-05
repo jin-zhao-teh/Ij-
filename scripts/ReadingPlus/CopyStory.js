@@ -1,122 +1,87 @@
 (function () {
-  var _0x4a3c = [
+  var xhr = new XMLHttpRequest();
+  xhr.open(
     "GET",
     "https://student.readingplus.com/seereader/api/sr/getNext.json",
-    "accept",
-    "*/*",
-    "accept-language",
-    "en-US,en;q=0.9",
-    "cache-control",
-    "no-cache",
-    "pragma",
-    "no-cache",
-    "priority",
-    "u=1, i",
+    true
+  );
+  xhr.setRequestHeader("accept", "*/*");
+  xhr.setRequestHeader("accept-language", "en-US,en;q=0.9");
+  xhr.setRequestHeader("cache-control", "no-cache");
+  xhr.setRequestHeader("pragma", "no-cache");
+  xhr.setRequestHeader("priority", "u=1, i");
+  xhr.setRequestHeader(
     "sec-ch-ua",
-    '"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"',
-    "sec-ch-ua-mobile",
-    "?0",
-    "sec-ch-ua-platform",
-    '"Windows"',
-    "withCredentials",
-    "onload",
-    "status",
-    "responseText",
-    "section",
-    "data",
-    "storyId",
-    "writeText",
-    "GET",
-    "https://content.readingplus.com/rp-content/ssr/",
-    "json",
-    "Compiled Story Text:\n",
-    "alert",
-    "Error fetching story content: ",
-    "onerror",
-    "Request failed while fetching story content.",
-    "send",
-    "Error fetching data: ",
-    "Request failed.",
-    "No story data available to compile.",
-    "segmentList",
-    "forEach",
-    "paragraphList",
-    "words",
-    "join",
-    "trim",
-    "log",
-  ];
+    '"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"'
+  );
+  xhr.setRequestHeader("sec-ch-ua-mobile", "?0");
+  xhr.setRequestHeader("sec-ch-ua-platform", '"Windows"');
+  xhr.withCredentials = true;
 
-  function _0x21bf(_0x1053, _0x3489) {
-    _0x1053 = _0x1053 - 0x0;
-    return _0x4a3c[_0x1053];
-  }
+  xhr.onload = function () {
+    if (xhr.status === 200) {
+      var data = JSON.parse(xhr.responseText);
+      if (data.section && data.section.data) {
+        var storyId = data.section.data.storyId;
+        navigator.clipboard.writeText(storyId);
 
-  var xhr = new XMLHttpRequest();
-  xhr[_0x21bf(0x0)](_0x21bf(0x1), _0x21bf(0x2), true);
-  xhr.setRequestHeader(_0x21bf(0x3), _0x21bf(0x4));
-  xhr.setRequestHeader(_0x21bf(0x5), _0x21bf(0x6));
-  xhr.setRequestHeader(_0x21bf(0x7), _0x21bf(0x8));
-  xhr.setRequestHeader(_0x21bf(0x9), _0x21bf(0xa));
-  xhr.setRequestHeader(_0x21bf(0xb), _0x21bf(0xc));
-  xhr.setRequestHeader(_0x21bf(0xd), _0x21bf(0xe));
-  xhr.setRequestHeader(_0x21bf(0xf), _0x21bf(0x10));
-  xhr.setRequestHeader(_0x21bf(0x11), _0x21bf(0x12));
-  xhr[_0x21bf(0x13)] = true;
-  xhr[_0x21bf(0x14)] = function () {
-    if (xhr[_0x21bf(0x15)] === 200) {
-      var data = JSON.parse(xhr[_0x21bf(0x16)]);
-      if (data[_0x21bf(0x17)] && data[_0x21bf(0x17)][_0x21bf(0x18)]) {
-        var storyId = data[_0x21bf(0x17)][_0x21bf(0x18)][_0x21bf(0x19)];
-        navigator[_0x21bf(0x1a)][storyId];
         var storyXhr = new XMLHttpRequest();
-        storyXhr[_0x21bf(0x0)](
-          _0x21bf(0x1b) + storyId + "." + _0x21bf(0x1c),
+        storyXhr.open(
+          "GET",
+          `https://content.readingplus.com/rp-content/ssr/${storyId}.json`,
           true
         );
-        storyXhr[_0x21bf(0x14)] = function () {
-          if (storyXhr[_0x21bf(0x15)] === 200) {
-            var storyData = JSON.parse(storyXhr[_0x21bf(0x16)]);
+
+        storyXhr.onload = function () {
+          if (storyXhr.status === 200) {
+            var storyData = JSON.parse(storyXhr.responseText);
+
             const compileStory = function (data) {
-              if (!data || !data[_0x21bf(0x23)]) {
-                return _0x21bf(0x26);
+              if (!data || !data.segmentList) {
+                return "No story data available to compile.";
               }
-              const segmentList = data[_0x21bf(0x23)];
+              const { segmentList } = data;
               let compiledText = "";
-              segmentList[_0x21bf(0x27)]((segment) => {
-                segment[_0x21bf(0x28)][_0x21bf(0x27)]((paragraph) => {
-                  compiledText += paragraph[_0x21bf(0x29)].join(" ") + "\n";
+              segmentList.forEach((segment) => {
+                segment.paragraphList.forEach((paragraph) => {
+                  compiledText += paragraph.words.join(" ") + "\n";
                 });
                 compiledText += "\n";
               });
               return compiledText.trim();
             };
+
             var compiledText = compileStory(storyData);
+
             if (compiledText) {
-              console[_0x21bf(0x2a)](_0x21bf(0x1d) + compiledText);
-              navigator[_0x21bf(0x1a)][
+              console.log("Compiled Story Text:\n", compiledText);
+              navigator.clipboard.writeText(
                 compiledText +
                   " Use this selection to answer the questions I am going to give you. DO NOT USE OTHER RESOURCES"
-              ];
-              alert(_0x21bf(0x1d) + compiledText);
+              );
+              alert("Compiled Story Text:\n" + compiledText);
             }
           } else {
-            alert(_0x21bf(0x1e) + storyXhr.status);
+            alert("Error fetching story content: " + storyXhr.status);
           }
         };
-        storyXhr[_0x21bf(0x1f)] = function () {
-          alert(_0x21bf(0x20));
+
+        storyXhr.onerror = function () {
+          alert("Request failed while fetching story content.");
         };
-        storyXhr[_0x21bf(0x21)]();
+
+        storyXhr.send();
       } else {
         alert("Story ID not found in the response.");
       }
     } else {
-      alert(_0x21bf(0x22) + xhr.status);
+      alert("Error fetching data: " + xhr.status);
     }
   };
-  xhr[_0x21bf(0x1f)] = function () {
-    alert(_0x21bf(0x24));
+
+  xhr.onerror = function () {
+    alert("Request failed.");
   };
-  xhr[_0x21bf(0x21)]();
+
+  xhr.send();
 })();
