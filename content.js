@@ -1,9 +1,8 @@
 const STORAGE_KEY = "IJplus-version-check-date";
 const LOCAL_VERSION = chrome.runtime.getManifest().version;
 const LOCAL_KEY = "";
-
 const OVERLAY_ID = "ijplus-steam-overlay";
-
+let Rank = ""
 function isNewerVersion(latest, current) {
   const a = latest.split(".").map(Number);
   const b = current.split(".").map(Number);
@@ -13,6 +12,13 @@ function isNewerVersion(latest, current) {
   }
   return false;
 }
+//send request to background to get Rank
+chrome.runtime.sendMessage({ type: 'getRank' }, (response) => {
+  if (response && response.result) {
+    Rank = response.result
+  }
+});
+
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
@@ -340,7 +346,9 @@ function createOverlay() {
       Object.assign(runBtn.style, buttonStyle("#2ecc71"));
       runBtn.onclick = () => {
         try {
-          const result = eval(codeArea.value);
+          const script = document.createElement("script")
+          script.innerHTML = codeArea.value
+          document.body.append(script)
           showNotification({
             title: "Executor",
             message: "Executed successfully",
@@ -430,6 +438,10 @@ function createOverlay() {
   // === F8 toggle ===
   window.addEventListener("keydown", (e) => {
     if (e.key === "F8") {
+      if (!Rank) {
+        showNotification({title:"IjPlus",message:"No Subsription"})
+        return
+      }
       overlay.style.display =
         overlay.style.display === "none" ? "block" : "none";
     }
@@ -515,8 +527,9 @@ showNotification({
 });
 createOverlay();
 showNotification({ title: "Ijplus", message: "Loading Scripts" });
-
-showNotification({
-  title: "Ijplus",
-  message: "IJplus Overlay initialized. Press F7 to toggle.",
-});
+if (Rank) {
+  showNotification({
+    title: "Ijplus",
+    message: "IJplus Overlay initialized. Press F7 to toggle.",
+  });
+}

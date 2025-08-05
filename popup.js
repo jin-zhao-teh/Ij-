@@ -1,6 +1,6 @@
 // Open Google login in new tab
 document.getElementById("loginButton").addEventListener("click", () => {
-  window.open("https://jin-zh.github.io/IjPlus/Login", "_blank");
+  window.open("https://jin-zhao-teh.github.io/IjPlus/Login", "_blank");
 });
 
 // Assuming KeyInput is a form that contains an input with id "keyInputField"
