@@ -102,13 +102,22 @@ function runScript(file) {
         file,
       },
       (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError.message);
-        } else if (response?.error) {
-          reject(response.error);
-        } else {
-          resolve(response.results);
-        }
+        // Check if we should close the overlay
+        chrome.storage.local.get(["ijplus-close-on-execute"], (result) => {
+          if (result["ijplus-close-on-execute"] !== false) {
+            // Defaults to true
+            overlay.style.display = "none";
+          }
+
+          // Handle response
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError.message);
+          } else if (response?.error) {
+            reject(response.error);
+          } else {
+            resolve(response.results);
+          }
+        });
       }
     );
   });
@@ -785,6 +794,33 @@ function createOverlay() {
 
         return { section, buttonContainer };
       }
+      function createSubtitle(text, parentElement, options = {}) {
+        const subtitle = document.createElement("div");
+        subtitle.textContent = text;
+
+        // Default styling
+        Object.assign(subtitle.style, {
+          color: "#aaa",
+          fontSize: "14px",
+          marginBottom: "15px",
+          fontWeight: "500",
+          letterSpacing: "0.5px",
+          textTransform: "uppercase",
+        });
+
+        // Override with any custom styles
+        if (options.styles) {
+          Object.assign(subtitle.style, options.styles);
+        }
+
+        // Add any custom classes
+        if (options.className) {
+          subtitle.className = options.className;
+        }
+
+        parentElement.appendChild(subtitle);
+        return subtitle;
+      }
 
       // SeeReader Section
       const { section: seeReaderSection, buttonContainer: seeReaderButtons } =
@@ -833,14 +869,16 @@ function createOverlay() {
 
       // Ibalance Section (silver+)
       if (!["bronze"].includes(Rank.toLowerCase())) {
+        // ===== IBALANCE SECTION (SILVER+ USERS) =====
         const { section: ibalanceSection, buttonContainer: ibalanceButtons } =
-          createSection("Ibalance", "Flash");
+          createSection("Ibalance");
         sectionsContainer.appendChild(ibalanceSection);
 
+        // ---- Flash Button (Silver+) ----
         ibalanceButtons.appendChild(
           createButton("Complete Flash", "#e67e22", () => {
             runScript("scripts/ReadingPlus/CompleteFlash.js")
-              .then((result) => {
+              .then(() => {
                 showNotification({
                   title: "Ibalance - Flash",
                   message: "Completing Flash, press Space twice when ready",
@@ -854,148 +892,101 @@ function createOverlay() {
               });
           })
         );
-      }
 
-      // Scan Section (gold+)
-      if (
-        ["gold", "emerald", "diamond", "platinum"].includes(Rank.toLowerCase())
-      ) {
-        const { section: scanSection, buttonContainer: scanButtons } =
-          createSection("Scan");
-        sectionsContainer.appendChild(scanSection);
-
-        // Create controls container
-        const controlsContainer = document.createElement("div");
-        Object.assign(controlsContainer.style, {
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
-          marginBottom: "20px",
-          padding: "18px",
-          background: "rgba(26, 26, 26, 0.7)",
-          borderRadius: "10px",
-          backdropFilter: "blur(5px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-        });
-        scanButtons.appendChild(controlsContainer);
-
-        // Create label and input field
-        const inputContainer = document.createElement("div");
-        Object.assign(inputContainer.style, {
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "20px",
-        });
-
-        const percentageLabel = document.createElement("label");
-        percentageLabel.textContent = "Correct Percentage:";
-        percentageLabel.style.color = "#aaa";
-        percentageLabel.style.fontSize = "15px";
-        percentageLabel.style.flex = "1";
-
-        const percentageInput = document.createElement("input");
-        percentageInput.type = "number";
-        percentageInput.min = "0";
-        percentageInput.max = "100";
-        percentageInput.value = "80";
-        Object.assign(percentageInput.style, {
-          width: "90px",
-          padding: "10px 12px",
-          background: "rgba(34, 34, 34, 0.8)",
-          color: "#9b59b6",
-          border: "1px solid rgba(155, 89, 182, 0.5)",
-          borderRadius: "8px",
-          fontFamily: "monospace",
-          fontSize: "16px",
-          fontWeight: "600",
-          textAlign: "center",
-          backdropFilter: "blur(5px)",
-        });
-
-        inputContainer.appendChild(percentageLabel);
-        inputContainer.appendChild(percentageInput);
-        controlsContainer.appendChild(inputContainer);
-
-        // Create slider
-        const slider = document.createElement("input");
-        slider.type = "range";
-        slider.min = "0";
-        slider.max = "100";
-        slider.value = "80";
-        slider.step = "1";
-        Object.assign(slider.style, {
-          width: "100%",
-          height: "12px",
-          background:
-            "linear-gradient(to right, #9b59b6 0%, #9b59b6 80%, #333 80%, #333 100%)",
-          outline: "none",
-          borderRadius: "6px",
-          WebkitAppearance: "none",
-        });
-
-        // Custom slider styling
-        slider.style.setProperty("--thumb-size", "22px");
-        slider.style.setProperty("--thumb-color", "#9b59b6");
-        slider.style.cssText += `
-          -webkit-appearance: none;
-          height: 12px;
-          background: linear-gradient(to right, #9b59b6 0%, #9b59b6 80%, #333 80%, #333 100%);
-          border-radius: 6px;
-          outline: none;
-          
-          &::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: var(--thumb-size);
-            height: var(--thumb-size);
-            border-radius: 50%;
-            background: var(--thumb-color);
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.6);
-            border: 2px solid #fff;
-          }
-          
-          &::-moz-range-thumb {
-            width: var(--thumb-size);
-            height: var(--thumb-size);
-            border-radius: 50%;
-            background: var(--thumb-color);
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.6);
-            border: 2px solid #fff;
-          }
-        `;
-
-        // Link slider and input
-        percentageInput.addEventListener("input", () => {
-          let value = Math.min(
-            100,
-            Math.max(0, parseInt(percentageInput.value) || 0)
-          );
-          slider.value = value;
-          percentageInput.value = value;
-          slider.style.background = `linear-gradient(to right, #9b59b6 0%, #9b59b6 ${value}%, #333 ${value}%, #333 100%)`;
-        });
-
-        slider.addEventListener("input", () => {
-          percentageInput.value = slider.value;
-          slider.style.background = `linear-gradient(to right, #9b59b6 0%, #9b59b6 ${slider.value}%, #333 ${slider.value}%, #333 100%)`;
-        });
-
-        controlsContainer.appendChild(slider);
-
-        // Create run button
-        const runButton = createButton("Complete Scan", "#9b59b6", () => {
-          const percentage = parseInt(percentageInput.value);
-          showNotification({
-            title: "Scan",
-            message: `Scan completed with ${percentage}% accuracy`,
+        // ===== SCAN SUBTITLE & CONTROLS (GOLD+ USERS) =====
+        if (
+          ["gold", "emerald", "diamond", "platinum"].includes(
+            Rank.toLowerCase()
+          )
+        ) {
+          // ---- Scan Subtitle ----
+          createSubtitle("Scan", ibalanceButtons, {
+            color: "#9b59b6",
+            icon: "🔍", // Optional magnifying glass icon
+            iconColor: "#9b59b6", // Matches purple theme
+            borderLeft: "3px solid #9b59b6", // Accent bar
           });
-          window.localStorage.setItem("correctPercentage", percentage);
-          runScript("scripts/ReadingPlus/CompleteScan.js");
-        });
 
-        scanButtons.appendChild(runButton);
+          // ---- Scan Controls Container ----
+          const scanControls = document.createElement("div");
+          Object.assign(scanControls.style, {
+            background: "rgba(26, 26, 26, 0.7)",
+            borderRadius: "10px",
+            padding: "15px",
+            marginBottom: "15px",
+            border: "1px solid rgba(155, 89, 182, 0.2)",
+          });
+
+          // ---- Percentage Input ----
+          const inputContainer = document.createElement("div");
+          inputContainer.style.display = "flex";
+          inputContainer.style.justifyContent = "space-between";
+          inputContainer.style.alignItems = "center";
+          inputContainer.style.marginBottom = "10px";
+
+          const percentageLabel = document.createElement("label");
+          percentageLabel.textContent = "Correct Percentage:";
+          percentageLabel.style.color = "#aaa";
+
+          const percentageInput = document.createElement("input");
+          percentageInput.type = "number";
+          percentageInput.min = "0";
+          percentageInput.max = "100";
+          percentageInput.value = "80";
+          Object.assign(percentageInput.style, {
+            width: "70px",
+            padding: "8px",
+            background: "rgba(34, 34, 34, 0.8)",
+            color: "#9b59b6",
+            border: "1px solid rgba(155, 89, 182, 0.5)",
+            borderRadius: "6px",
+            fontWeight: "600",
+            textAlign: "center",
+          });
+
+          inputContainer.appendChild(percentageLabel);
+          inputContainer.appendChild(percentageInput);
+          scanControls.appendChild(inputContainer);
+
+          // ---- Slider ----
+          const slider = document.createElement("input");
+          slider.type = "range";
+          slider.min = "0";
+          slider.max = "100";
+          slider.value = "80";
+          Object.assign(slider.style, {
+            width: "100%",
+            height: "8px",
+            background:
+              "linear-gradient(to right, #9b59b6 0%, #9b59b6 80%, #333 80%, #333 100%)",
+            borderRadius: "4px",
+            marginBottom: "15px",
+            WebkitAppearance: "none",
+          });
+
+          // Link slider and input
+          percentageInput.addEventListener("input", () => {
+            slider.value = percentageInput.value;
+          });
+          slider.addEventListener("input", () => {
+            percentageInput.value = slider.value;
+          });
+          scanControls.appendChild(slider);
+
+          // ---- Scan Button ----
+          const scanButton = createButton("Complete Scan", "#9b59b6", () => {
+            const percentage = parseInt(percentageInput.value);
+            showNotification({
+              title: "Scan",
+              message: `Scan completed with ${percentage}% accuracy`,
+            });
+            window.localStorage.setItem("correctPercentage", percentage);
+            runScript("scripts/ReadingPlus/CompleteScan.js");
+          });
+          scanControls.appendChild(scanButton);
+
+          ibalanceButtons.appendChild(scanControls);
+        }
       }
 
       // Complete All button (platinum only)
@@ -1056,6 +1047,134 @@ function createOverlay() {
         `;
         sectionsContainer.appendChild(info);
       }
+    } else if (tab === "Settings") {
+      // Clear existing content
+      contentBody.innerHTML = "";
+
+      // Title
+      const title = document.createElement("h2");
+      title.textContent = "IJplus Settings";
+      Object.assign(title.style, {
+        fontSize: "22px",
+        color: "#2e86de",
+        marginBottom: "25px",
+        fontWeight: "700",
+      });
+      contentBody.appendChild(title);
+
+      // === Toggle Switch: Close Overlay on Execution ===
+      const toggleContainer = document.createElement("div");
+      Object.assign(toggleContainer.style, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "15px",
+        background: "rgba(30, 30, 30, 0.7)",
+        borderRadius: "10px",
+        marginBottom: "20px",
+        border: "1px solid rgba(255,255,255,0.1)",
+      });
+
+      const toggleLabel = document.createElement("span");
+      toggleLabel.textContent = "Close overlay when script is executed";
+      toggleLabel.style.color = "#eee";
+      toggleLabel.style.fontSize = "15px";
+
+      const toggleSwitch = document.createElement("label");
+      toggleSwitch.className = "ijplus-switch";
+      Object.assign(toggleSwitch.style, {
+        position: "relative",
+        display: "inline-block",
+        width: "50px",
+        height: "24px",
+      });
+
+      const toggleSlider = document.createElement("span");
+      toggleSlider.className = "ijplus-slider";
+      Object.assign(toggleSlider.style, {
+        position: "absolute",
+        cursor: "pointer",
+        top: "0",
+        left: "0",
+        right: "0",
+        bottom: "0",
+        backgroundColor: "#444",
+        transition: "0.4s",
+        borderRadius: "24px",
+      });
+
+      const toggleInput = document.createElement("input");
+      toggleInput.type = "checkbox";
+      toggleInput.checked = true; // Default enabled
+      Object.assign(toggleInput.style, {
+        opacity: "0",
+        width: "0",
+        height: "0",
+      });
+
+      // Custom slider knob
+      const toggleKnob = document.createElement("span");
+      toggleKnob.className = "ijplus-knob";
+      Object.assign(toggleKnob.style, {
+        position: "absolute",
+        content: "''",
+        height: "16px",
+        width: "16px",
+        left: "4px",
+        bottom: "4px",
+        backgroundColor: "#fff",
+        transition: "0.4s",
+        borderRadius: "50%",
+      });
+
+      // Toggle animation
+      toggleInput.addEventListener("change", function () {
+        if (this.checked) {
+          toggleSlider.style.backgroundColor = "#2e86de";
+          toggleKnob.style.transform = "translateX(26px)";
+        } else {
+          toggleSlider.style.backgroundColor = "#444";
+          toggleKnob.style.transform = "translateX(0)";
+        }
+        // Save to storage
+        chrome.storage.local.set({ "ijplus-close-on-execute": this.checked });
+      });
+
+      // Load saved preference
+      chrome.storage.local.get(["ijplus-close-on-execute"], (result) => {
+        const isEnabled = result["ijplus-close-on-execute"] !== false; // Default true
+        toggleInput.checked = isEnabled;
+        if (isEnabled) {
+          toggleSlider.style.backgroundColor = "#2e86de";
+          toggleKnob.style.transform = "translateX(26px)";
+        }
+      });
+
+      // Assemble toggle
+      toggleSwitch.appendChild(toggleInput);
+      toggleSwitch.appendChild(toggleSlider);
+      toggleSlider.appendChild(toggleKnob);
+      toggleContainer.appendChild(toggleLabel);
+      toggleContainer.appendChild(toggleSwitch);
+      contentBody.appendChild(toggleContainer);
+
+      // === Version Info ===
+      const versionInfo = document.createElement("div");
+      Object.assign(versionInfo.style, {
+        padding: "15px",
+        background: "rgba(30, 30, 30, 0.5)",
+        borderRadius: "10px",
+        marginTop: "30px",
+        textAlign: "center",
+        fontSize: "13px",
+        color: "#888",
+      });
+
+      versionInfo.innerHTML = `
+    <div>IJplus v${LOCAL_VERSION}</div>
+    <div style="margin-top: 8px;">&copy; ${new Date().getFullYear()} IJplus Tools</div>
+  `;
+      contentBody.appendChild(versionInfo);
     } else {
       // Other tabs
       const title = document.createElement("div");
