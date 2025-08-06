@@ -12,7 +12,8 @@ function isNewerVersion(latest, current) {
   }
   return false;
 }
-//send request to background to get Rank
+
+// Get user rank
 chrome.runtime.sendMessage({ type: "getRank" }, (response) => {
   if (response && response.result) {
     Rank = response.result;
@@ -22,6 +23,8 @@ chrome.runtime.sendMessage({ type: "getRank" }, (response) => {
 function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
+
+// Custom fetch implementation
 window.fetch = function (url, options = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -36,7 +39,7 @@ window.fetch = function (url, options = {}) {
       }
     }
 
-    xhr.responseType = "text"; // Default, you can change this if needed
+    xhr.responseType = "text";
 
     xhr.onload = function () {
       const response = {
@@ -67,6 +70,7 @@ window.fetch = function (url, options = {}) {
   });
 };
 
+// Version checking
 function checkVersionWithXHR() {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -89,15 +93,19 @@ function checkVersionWithXHR() {
   });
 }
 
-function runScript(localFileName) {
+// Script runner
+function runScript(file) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
-      { action: "injectScript", file: localFileName },
+      {
+        action: "injectScript",
+        file,
+      },
       (response) => {
         if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else if (response.error) {
-          reject(new Error(response.error));
+          reject(chrome.runtime.lastError.message);
+        } else if (response?.error) {
+          reject(response.error);
         } else {
           resolve(response.results);
         }
@@ -106,6 +114,7 @@ function runScript(localFileName) {
   });
 }
 
+// Notification system
 const showNotification = (() => {
   const queue = [];
   let isShowing = false;
@@ -125,7 +134,7 @@ const showNotification = (() => {
         gap: "10px",
         pointerEvents: "none",
         maxWidth: "300px",
-        fontFamily: "Segoe UI, sans-serif",
+        fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
       });
       document.body.appendChild(container);
       window._notifContainer = container;
@@ -138,19 +147,20 @@ const showNotification = (() => {
     box.innerHTML = content;
     Object.assign(box.style, {
       width: "100%",
-      padding: isMessage ? "20px 18px" : "14px 18px", // bigger padding for messag
-      backgroundColor: "rgba(30, 30, 30, 0.4)",
+      padding: isMessage ? "16px 18px" : "12px 16px",
+      backgroundColor: "rgba(30, 30, 30, 0.6)",
       color: "#f0f0f0",
-      fontSize: isMessage ? "13px" : "10px",
-      border: "1px solid rgba(255, 255, 255, 0.1)",
-      borderRadius: "0px",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+      fontSize: isMessage ? "14px" : "12px",
+      border: "1px solid rgba(255, 255, 255, 0.15)",
+      borderRadius: "8px",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      boxShadow: "0 6px 20px rgba(0, 0, 0, 0.4)",
       boxSizing: "border-box",
       wordBreak: "break-word",
       userSelect: "none",
-      fontWeight: isMessage ? "normal" : "bold",
+      fontWeight: isMessage ? "normal" : "600",
+      lineHeight: "1.5",
     });
     return box;
   }
@@ -166,7 +176,7 @@ const showNotification = (() => {
     Object.assign(notif.style, {
       display: "flex",
       flexDirection: "column",
-      gap: "4px",
+      gap: "6px",
       width: "100%",
       opacity: "0",
       transform: "translateX(100%)",
@@ -175,7 +185,7 @@ const showNotification = (() => {
     });
 
     const titleBox = createBox(title, false);
-    const messageBox = createBox(message, true); // true = message
+    const messageBox = createBox(message, true);
 
     notif.appendChild(titleBox);
     notif.appendChild(messageBox);
@@ -216,14 +226,12 @@ const showNotification = (() => {
   };
 })();
 
+// Version check
 async function maybeCheckVersion() {
   const today = getToday();
 
   chrome.storage.local.get([STORAGE_KEY], async (result) => {
-    if (result[STORAGE_KEY] === today) {
-      // Already checked today
-      return;
-    }
+    if (result[STORAGE_KEY] === today) return;
 
     try {
       const latestVersion = await checkVersionWithXHR();
@@ -241,14 +249,11 @@ async function maybeCheckVersion() {
   });
 }
 
-function getToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-
+// Create the overlay
 function createOverlay() {
   if (document.getElementById("ij-overlay")) return;
 
-  // === Overlay ===
+  // === Overlay Container ===
   const overlay = document.createElement("div");
   overlay.id = "ij-overlay";
   Object.assign(overlay.style, {
@@ -258,7 +263,7 @@ function createOverlay() {
     width: "100vw",
     height: "100vh",
     backdropFilter: "blur(10px)",
-    backgroundColor: "rgba(50, 50, 50, 0.4)",
+    backgroundColor: "rgba(35, 35, 35, 0.45)",
     zIndex: "99999",
     display: "none",
   });
@@ -271,13 +276,25 @@ function createOverlay() {
     position: "absolute",
     top: "20px",
     left: "20px",
-    width: "200px",
+    width: "220px",
     background: "#121212",
     color: "white",
-    padding: "10px",
-    fontFamily: "monospace",
-    boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+    fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
+    boxShadow: "0 5px 25px rgba(0,0,0,0.7)",
     userSelect: "none",
+    borderRadius: "10px",
+    overflow: "hidden",
+  });
+
+  // Tab Panel Header
+  const tabPanelHeader = document.createElement("div");
+  tabPanelHeader.textContent = "IJplus Tools";
+  Object.assign(tabPanelHeader.style, {
+    background: "linear-gradient(to right, #1a1a1a, #2a2a2a)",
+    padding: "14px 18px",
+    fontSize: "15px",
+    fontWeight: "600",
+    borderBottom: "1px solid #333",
     cursor: "move",
   });
 
@@ -290,35 +307,40 @@ function createOverlay() {
     "Settings",
   ];
   const tabList = document.createElement("div");
+  Object.assign(tabList.style, {
+    padding: "12px 10px",
+  });
   let activeTab = null;
 
   tabs.forEach((tab) => {
     const tabBtn = document.createElement("div");
     tabBtn.textContent = tab;
-    tabBtn.className = "ij-tab-button";
     Object.assign(tabBtn.style, {
-      padding: "8px",
-      margin: "4px 0",
+      padding: "12px 14px",
+      margin: "8px 0",
       background: "#1e1e1e",
       color: "#ccc",
       cursor: "pointer",
-      transition: "0.2s",
+      transition: "all 0.25s ease",
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontWeight: "500",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
     });
 
     tabBtn.addEventListener("mouseover", () => {
-      if (tabBtn !== activeTab) tabBtn.style.background = "#2a2a2a";
+      if (tabBtn !== activeTab) tabBtn.style.background = "#252525";
     });
     tabBtn.addEventListener("mouseout", () => {
       if (tabBtn !== activeTab) tabBtn.style.background = "#1e1e1e";
     });
     tabBtn.addEventListener("click", () => {
-      if (activeTab)
-        Object.assign(activeTab.style, {
-          background: "#1e1e1e",
-          color: "#ccc",
-        });
+      if (activeTab) {
+        activeTab.style.background = "#1e1e1e";
+        activeTab.style.color = "#ccc";
+      }
       Object.assign(tabBtn.style, {
-        background: "#2e86de",
+        background: "linear-gradient(to right, #2e86de, #1e6ec7)",
         color: "#fff",
       });
       activeTab = tabBtn;
@@ -328,6 +350,7 @@ function createOverlay() {
     tabList.appendChild(tabBtn);
   });
 
+  tabPanel.appendChild(tabPanelHeader);
   tabPanel.appendChild(tabList);
   overlay.appendChild(tabPanel);
 
@@ -338,72 +361,193 @@ function createOverlay() {
     position: "absolute",
     top: "50%",
     left: "50%",
-    width: "600px",
-    height: "400px",
+    width: "680px",
+    height: "480px",
     transform: "translate(-50%, -50%)",
     background: "#161616",
     color: "white",
-    padding: "20px",
-    fontFamily: "monospace",
-    boxShadow: "0 0 20px rgba(0,0,0,0.6)",
+    fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
+    boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
     resize: "both",
-    overflow: "auto",
+    overflow: "hidden",
+    borderRadius: "12px",
+    display: "flex",
+    flexDirection: "column",
   });
+
+  // Content Panel Header
+  const contentHeader = document.createElement("div");
+  Object.assign(contentHeader.style, {
+    background: "linear-gradient(to right, #1a1a1a, #2a2a2a)",
+    padding: "16px 20px",
+    fontSize: "16px",
+    fontWeight: "600",
+    borderBottom: "1px solid #333",
+    cursor: "move",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  });
+
+  const contentTitle = document.createElement("div");
+  contentTitle.textContent = "IJplus Dashboard";
+  contentHeader.appendChild(contentTitle);
+
+  // Close button
+  const closeButton = document.createElement("div");
+  closeButton.innerHTML = "&times;";
+  Object.assign(closeButton.style, {
+    cursor: "pointer",
+    fontSize: "22px",
+    width: "28px",
+    height: "28px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "6px",
+    transition: "all 0.2s",
+    color: "#aaa",
+  });
+  closeButton.addEventListener("mouseover", () => {
+    closeButton.style.background = "#333";
+    closeButton.style.color = "#fff";
+  });
+  closeButton.addEventListener("mouseout", () => {
+    closeButton.style.background = "transparent";
+    closeButton.style.color = "#aaa";
+  });
+  closeButton.addEventListener("click", () => {
+    overlay.style.display = "none";
+  });
+  contentHeader.appendChild(closeButton);
+
+  // Content body
+  const contentBody = document.createElement("div");
+  Object.assign(contentBody.style, {
+    padding: "20px",
+    overflow: "auto",
+    flex: "1",
+    background: "radial-gradient(circle at center, #1a1a1a 0%, #121212 100%)",
+  });
+
+  contentPanel.appendChild(contentHeader);
+  contentPanel.appendChild(contentBody);
   overlay.appendChild(contentPanel);
 
   // Welcome message
-  contentPanel.innerHTML = `
-    <div style="text-align: center; padding: 50px 20px;">
-      <h2 style="color: #2e86de; font-size: 24px; margin-bottom: 20px;">Welcome to IJplus</h2>
-      <p style="color: #aaa; margin-bottom: 10px;">Press <kbd style="background: #333; padding: 2px 6px; border-radius: 4px;">F8</kbd> to toggle this overlay</p>
-      <p style="color: #aaa; margin-bottom: 10px;">Press <kbd style="background: #333; padding: 2px 6px; border-radius: 4px;">ESC</kbd> to close</p>
-      
-      <div style="margin: 30px 0; border-top: 1px solid #333; padding-top: 20px;">
-        <p style="color: #888;">Available tools:</p>
-        <ul style="text-align: left; display: inline-block; color: #ccc; margin-top: 10px; width: 80%;">
-          <li><strong style="color: #2e86de;">Executor</strong> - Run custom JavaScript code</li>
-          <li><strong style="color: #2e86de;">Console</strong> - View system messages and logs</li>
-          <li><strong style="color: #2e86de;">Settings</strong> - Configure your experience</li>
-        </ul>
+  contentBody.innerHTML = `
+    <div style="text-align: center; padding: 40px 20px;">
+      <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #2e86de, #1e6ec7); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
       </div>
       
-      <div style="color: #666; margin-top: 30px; font-size: 0.9em;">
+      <h2 style="color: #2e86de; font-size: 28px; margin-bottom: 25px; font-weight: 700;">Welcome to IJplus</h2>
+      
+      <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 40px; flex-wrap: wrap;">
+        <div style="background: rgba(30, 30, 30, 0.7); padding: 16px 24px; border-radius: 12px; min-width: 200px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+          <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;">Shortcut</div>
+          <kbd style="background: rgba(42, 42, 42, 0.8); padding: 8px 16px; border-radius: 8px; font-size: 15px; display: inline-block; min-width: 60px;">F8</kbd>
+          <div style="font-size: 14px; color: #ccc; margin-top: 12px;">Toggle Overlay</div>
+        </div>
+        <div style="background: rgba(30, 30, 30, 0.7); padding: 16px 24px; border-radius: 12px; min-width: 200px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+          <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;">Shortcut</div>
+          <kbd style="background: rgba(42, 42, 42, 0.8); padding: 8px 16px; border-radius: 8px; font-size: 15px; display: inline-block; min-width: 60px;">ESC</kbd>
+          <div style="font-size: 14px; color: #ccc; margin-top: 12px;">Close Overlay</div>
+        </div>
+      </div>
+      
+      <div style="margin: 40px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px;">
+        <p style="color: #888; margin-bottom: 25px; font-size: 16px; letter-spacing: 0.5px;">AVAILABLE TOOLS</p>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 600px; margin: 0 auto;">
+          <div style="background: rgba(26, 26, 26, 0.7); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #2e86de; font-weight: 600; margin-bottom: 12px; font-size: 16px;">Executor</div>
+            <div style="color: #aaa; font-size: 14px; line-height: 1.6;">Run custom JavaScript code with our sandboxed environment</div>
+          </div>
+          <div style="background: rgba(26, 26, 26, 0.7); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #2e86de; font-weight: 600; margin-bottom: 12px; font-size: 16px;">Console</div>
+            <div style="color: #aaa; font-size: 14px; line-height: 1.6;">View system messages and debug logs in real-time</div>
+          </div>
+          <div style="background: rgba(26, 26, 26, 0.7); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #2e86de; font-weight: 600; margin-bottom: 12px; font-size: 16px;">Settings</div>
+            <div style="color: #aaa; font-size: 14px; line-height: 1.6;">Configure preferences and extension behavior</div>
+          </div>
+          <div style="background: rgba(26, 26, 26, 0.7); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #2e86de; font-weight: 600; margin-bottom: 12px; font-size: 16px;">Reading Plus</div>
+            <div style="color: #aaa; font-size: 14px; line-height: 1.6;">Educational tools for enhanced learning experience</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="color: #666; margin-top: 40px; font-size: 13px;">
         <p>Drag windows by their headers • Resize using bottom-right corner</p>
-        <p>Made with ❤️ for educational purposes</p>
+        <p style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span>Made with</span>
+          <span style="color: #e74c3c;">❤️</span>
+          <span>for educational purposes</span>
+        </p>
       </div>
     </div>
   `;
 
+  // Render content for each tab
   function renderContent(tab) {
-    contentPanel.innerHTML = "";
+    contentBody.innerHTML = "";
 
     if (tab === "Executor") {
       const title = document.createElement("div");
       title.textContent = "IJplus Executor";
       Object.assign(title.style, {
-        fontSize: "16px",
-        color: "#0f0",
-        marginBottom: "10px",
+        fontSize: "20px",
+        color: "#2ecc71",
+        marginBottom: "20px",
+        fontWeight: "600",
       });
 
       const codeArea = document.createElement("textarea");
       Object.assign(codeArea.style, {
         width: "100%",
-        height: "250px",
-        background: "#000",
+        height: "280px",
+        background: "rgba(0, 0, 0, 0.5)",
         color: "#0f0",
-        border: "1px solid #444",
-        fontFamily: "monospace",
+        border: "1px solid rgba(255,255,255,0.1)",
+        fontFamily: "'Fira Code', 'Consolas', monospace",
         fontSize: "14px",
-        padding: "10px",
+        padding: "15px",
         resize: "vertical",
         boxSizing: "border-box",
+        borderRadius: "8px",
+        backdropFilter: "blur(5px)",
       });
-      codeArea.placeholder = "// write your JS here";
+      codeArea.placeholder = "// Write your JavaScript code here...";
 
       const runBtn = document.createElement("button");
-      runBtn.textContent = "Run";
-      Object.assign(runBtn.style, buttonStyle("#2ecc71"));
+      runBtn.textContent = "Run Code";
+      Object.assign(runBtn.style, {
+        background: "linear-gradient(to right, #2ecc71, #27ae60)",
+        color: "white",
+        border: "none",
+        padding: "12px 24px",
+        fontSize: "15px",
+        cursor: "pointer",
+        borderRadius: "8px",
+        fontWeight: "600",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        transition: "all 0.2s",
+      });
+      runBtn.addEventListener("mouseover", () => {
+        runBtn.style.transform = "translateY(-2px)";
+        runBtn.style.boxShadow = "0 6px 15px rgba(0,0,0,0.4)";
+      });
+      runBtn.addEventListener("mouseout", () => {
+        runBtn.style.transform = "translateY(0)";
+        runBtn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+      });
       runBtn.onclick = () => {
         try {
           const script = document.createElement("script");
@@ -411,9 +555,8 @@ function createOverlay() {
           document.body.append(script);
           showNotification({
             title: "Executor",
-            message: "Executed successfully",
+            message: "Code executed successfully",
           });
-          console.log("%c[IJplus Eval Output]", "color:lime;", result);
         } catch (e) {
           showNotification({ title: "Executor Error", message: e.toString() });
         }
@@ -421,96 +564,194 @@ function createOverlay() {
 
       const clearBtn = document.createElement("button");
       clearBtn.textContent = "Clear";
-      Object.assign(clearBtn.style, buttonStyle("#e74c3c"));
+      Object.assign(clearBtn.style, {
+        background: "rgba(231, 76, 60, 0.8)",
+        color: "white",
+        border: "none",
+        padding: "12px 24px",
+        fontSize: "15px",
+        cursor: "pointer",
+        borderRadius: "8px",
+        fontWeight: "600",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        transition: "all 0.2s",
+      });
+      clearBtn.addEventListener("mouseover", () => {
+        clearBtn.style.transform = "translateY(-2px)";
+        clearBtn.style.boxShadow = "0 6px 15px rgba(0,0,0,0.4)";
+      });
+      clearBtn.addEventListener("mouseout", () => {
+        clearBtn.style.transform = "translateY(0)";
+        clearBtn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+      });
       clearBtn.onclick = () => (codeArea.value = "");
 
       const buttonRow = document.createElement("div");
       Object.assign(buttonRow.style, {
         display: "flex",
-        gap: "10px",
-        marginTop: "10px",
+        gap: "15px",
+        marginTop: "20px",
         justifyContent: "flex-end",
       });
       buttonRow.appendChild(clearBtn);
       buttonRow.appendChild(runBtn);
 
-      contentPanel.appendChild(title);
-      contentPanel.appendChild(codeArea);
-      contentPanel.appendChild(buttonRow);
+      contentBody.appendChild(title);
+      contentBody.appendChild(codeArea);
+      contentBody.appendChild(buttonRow);
     } else if (tab === "Console") {
       const title = document.createElement("div");
       title.textContent = "System Console";
-      title.style.fontSize = "16px";
-      title.style.color = "#0f0";
-      title.style.marginBottom = "10px";
+      Object.assign(title.style, {
+        fontSize: "20px",
+        color: "#2ecc71",
+        marginBottom: "20px",
+        fontWeight: "600",
+      });
 
       const consoleOutput = document.createElement("div");
       consoleOutput.id = "ij-console-output";
       Object.assign(consoleOutput.style, {
-        backgroundColor: "#000",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
         color: "#0f0",
-        height: "300px",
-        padding: "10px",
+        height: "340px",
+        padding: "15px",
         overflowY: "auto",
-        fontFamily: "monospace",
+        fontFamily: "'Fira Code', 'Consolas', monospace",
         whiteSpace: "pre-wrap",
+        borderRadius: "8px",
+        backdropFilter: "blur(5px)",
+        border: "1px solid rgba(255,255,255,0.1)",
       });
 
       const clearBtn = document.createElement("button");
       clearBtn.textContent = "Clear Console";
-      Object.assign(clearBtn.style, buttonStyle("#e74c3c"));
+      Object.assign(clearBtn.style, {
+        background: "rgba(231, 76, 60, 0.8)",
+        color: "white",
+        border: "none",
+        padding: "12px 24px",
+        fontSize: "15px",
+        cursor: "pointer",
+        borderRadius: "8px",
+        fontWeight: "600",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        transition: "all 0.2s",
+        marginTop: "20px",
+      });
+      clearBtn.addEventListener("mouseover", () => {
+        clearBtn.style.transform = "translateY(-2px)";
+        clearBtn.style.boxShadow = "0 6px 15px rgba(0,0,0,0.4)";
+      });
+      clearBtn.addEventListener("mouseout", () => {
+        clearBtn.style.transform = "translateY(0)";
+        clearBtn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+      });
       clearBtn.onclick = () => (consoleOutput.innerHTML = "");
 
-      contentPanel.appendChild(title);
-      contentPanel.appendChild(consoleOutput);
-      contentPanel.appendChild(clearBtn);
+      contentBody.appendChild(title);
+      contentBody.appendChild(consoleOutput);
+      contentBody.appendChild(clearBtn);
     } else if (tab === "Reading Plus") {
       // Create main title
       const title = document.createElement("h2");
       title.textContent = "Reading Plus Tools";
-      title.style.color = "#2e86de";
-      title.style.marginBottom = "20px";
-      contentPanel.appendChild(title);
+      Object.assign(title.style, {
+        color: "#2e86de",
+        marginBottom: "20px",
+        fontSize: "22px",
+        fontWeight: "700",
+      });
+      contentBody.appendChild(title);
 
       // Create rank indicator
+      const rankContainer = document.createElement("div");
+      Object.assign(rankContainer.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        marginBottom: "25px",
+        padding: "12px 16px",
+        background: "rgba(26, 26, 26, 0.7)",
+        borderRadius: "10px",
+        backdropFilter: "blur(5px)",
+        border: "1px solid rgba(255,255,255,0.1)",
+      });
+
+      const rankLabel = document.createElement("div");
+      rankLabel.textContent = "Your Plan:";
+      rankLabel.style.color = "#aaa";
+      rankLabel.style.fontSize = "15px";
+
       const rankIndicator = document.createElement("div");
-      rankIndicator.textContent = `Your Rank: ${Rank}`;
-      rankIndicator.style.color = "#aaa";
-      rankIndicator.style.marginBottom = "15px";
-      contentPanel.appendChild(rankIndicator);
+      rankIndicator.textContent = Rank;
+      Object.assign(rankIndicator.style, {
+        color: "#ffcc00",
+        fontWeight: "700",
+        padding: "6px 16px",
+        background: "rgba(42, 42, 42, 0.8)",
+        borderRadius: "20px",
+        fontSize: "14px",
+        letterSpacing: "0.5px",
+      });
+
+      rankContainer.appendChild(rankLabel);
+      rankContainer.appendChild(rankIndicator);
+      contentBody.appendChild(rankContainer);
 
       // Create sections container
       const sectionsContainer = document.createElement("div");
       sectionsContainer.style.display = "flex";
       sectionsContainer.style.flexDirection = "column";
-      sectionsContainer.style.gap = "25px";
-      contentPanel.appendChild(sectionsContainer);
+      sectionsContainer.style.gap = "30px";
+      contentBody.appendChild(sectionsContainer);
 
       // Helper function to create buttons
       function createButton(text, color, onClick) {
         const button = document.createElement("button");
         button.textContent = text;
         Object.assign(button.style, {
-          backgroundColor: color,
+          background: `linear-gradient(to right, ${color}, ${adjustColor(
+            color,
+            -20
+          )})`,
           color: "white",
           border: "none",
-          padding: "8px 16px",
-          fontSize: "14px",
+          padding: "12px 20px",
+          fontSize: "15px",
           cursor: "pointer",
-          borderRadius: "4px",
+          borderRadius: "8px",
           transition: "all 0.2s",
-          minWidth: "150px",
+          minWidth: "180px",
+          fontWeight: "600",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
         });
         button.addEventListener("mouseover", () => {
-          button.style.opacity = "0.9";
-          button.style.transform = "translateY(-2px)";
+          button.style.transform = "translateY(-3px)";
+          button.style.boxShadow = "0 6px 15px rgba(0,0,0,0.4)";
         });
         button.addEventListener("mouseout", () => {
-          button.style.opacity = "1";
           button.style.transform = "translateY(0)";
+          button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
         });
         button.addEventListener("click", onClick);
         return button;
+      }
+
+      // Helper to adjust color for gradients
+      function adjustColor(color, amount) {
+        const clamp = (val) => Math.min(Math.max(val, 0), 255);
+        let r = parseInt(color.substring(1, 3), 16);
+        let g = parseInt(color.substring(3, 5), 16);
+        let b = parseInt(color.substring(5, 7), 16);
+
+        return `#${clamp(r + amount)
+          .toString(16)
+          .padStart(2, "0")}${clamp(g + amount)
+          .toString(16)
+          .padStart(2, "0")}${clamp(b + amount)
+          .toString(16)
+          .padStart(2, "0")}`;
       }
 
       // Helper function to create sections
@@ -519,34 +760,38 @@ function createOverlay() {
 
         const sectionTitle = document.createElement("h3");
         sectionTitle.textContent = title;
-        sectionTitle.style.color = "#2ecc71";
-        sectionTitle.style.marginBottom = "8px";
+        Object.assign(sectionTitle.style, {
+          color: "#2ecc71",
+          marginBottom: "10px",
+          fontSize: "18px",
+          fontWeight: "600",
+        });
         section.appendChild(sectionTitle);
 
         if (subtitle) {
           const sectionSubtitle = document.createElement("div");
           sectionSubtitle.textContent = subtitle;
           sectionSubtitle.style.color = "#aaa";
-          sectionSubtitle.style.fontSize = "12px";
-          sectionSubtitle.style.marginBottom = "12px";
+          sectionSubtitle.style.fontSize = "14px";
+          sectionSubtitle.style.marginBottom = "15px";
           section.appendChild(sectionSubtitle);
         }
 
         const buttonContainer = document.createElement("div");
         buttonContainer.style.display = "flex";
         buttonContainer.style.flexWrap = "wrap";
-        buttonContainer.style.gap = "10px";
+        buttonContainer.style.gap = "15px";
         section.appendChild(buttonContainer);
 
         return { section, buttonContainer };
       }
 
-      // SeeReader Section (available for all ranks)
+      // SeeReader Section
       const { section: seeReaderSection, buttonContainer: seeReaderButtons } =
         createSection("SeeReader");
       sectionsContainer.appendChild(seeReaderSection);
 
-      // Copy Question button (all ranks)
+      // Copy Question button
       seeReaderButtons.appendChild(
         createButton("Copy Question", "#3498db", () => {
           runScript("scripts/ReadingPlus/CopyQuestion.js")
@@ -559,7 +804,7 @@ function createOverlay() {
             .catch((error) => {
               showNotification({
                 title: "IjPlus",
-                message: "Failed to run script:" + error,
+                message: "Failed to run script: " + error,
               });
             });
         })
@@ -569,21 +814,17 @@ function createOverlay() {
       if (["emerald", "diamond", "platinum"].includes(Rank.toLowerCase())) {
         seeReaderButtons.appendChild(
           createButton("Copy Story", "#3498db", () => {
-            showNotification({
-              title: "SeeReader",
-              message: "Story copied to clipboard",
-            });
             runScript("scripts/ReadingPlus/CopyStory.js")
               .then((result) => {
                 showNotification({
                   title: "SeeReader",
-                  message: "Copied Story to Clipboard",
+                  message: "Story copied to clipboard",
                 });
               })
               .catch((error) => {
                 showNotification({
                   title: "IjPlus",
-                  message: "Failed to run script:" + error,
+                  message: "Failed to run script: " + error,
                 });
               });
           })
@@ -602,13 +843,13 @@ function createOverlay() {
               .then((result) => {
                 showNotification({
                   title: "Ibalance - Flash",
-                  message: "Completing Flash, Press the Space key twice",
+                  message: "Completing Flash, press Space twice when ready",
                 });
               })
               .catch((error) => {
                 showNotification({
                   title: "IjPlus",
-                  message: "Failed to run script:" + error,
+                  message: "Failed to run script: " + error,
                 });
               });
           })
@@ -623,35 +864,165 @@ function createOverlay() {
           createSection("Scan");
         sectionsContainer.appendChild(scanSection);
 
-        scanButtons.appendChild(
-          createButton("Complete Scan", "#9b59b6", () => {
-            showNotification({ title: "Scan", message: "Scan completed" });
-            // Actual implementation would go here
-          })
-        );
+        // Create controls container
+        const controlsContainer = document.createElement("div");
+        Object.assign(controlsContainer.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "15px",
+          marginBottom: "20px",
+          padding: "18px",
+          background: "rgba(26, 26, 26, 0.7)",
+          borderRadius: "10px",
+          backdropFilter: "blur(5px)",
+          border: "1px solid rgba(255,255,255,0.1)",
+        });
+        scanButtons.appendChild(controlsContainer);
+
+        // Create label and input field
+        const inputContainer = document.createElement("div");
+        Object.assign(inputContainer.style, {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "20px",
+        });
+
+        const percentageLabel = document.createElement("label");
+        percentageLabel.textContent = "Correct Percentage:";
+        percentageLabel.style.color = "#aaa";
+        percentageLabel.style.fontSize = "15px";
+        percentageLabel.style.flex = "1";
+
+        const percentageInput = document.createElement("input");
+        percentageInput.type = "number";
+        percentageInput.min = "0";
+        percentageInput.max = "100";
+        percentageInput.value = "80";
+        Object.assign(percentageInput.style, {
+          width: "90px",
+          padding: "10px 12px",
+          background: "rgba(34, 34, 34, 0.8)",
+          color: "#9b59b6",
+          border: "1px solid rgba(155, 89, 182, 0.5)",
+          borderRadius: "8px",
+          fontFamily: "monospace",
+          fontSize: "16px",
+          fontWeight: "600",
+          textAlign: "center",
+          backdropFilter: "blur(5px)",
+        });
+
+        inputContainer.appendChild(percentageLabel);
+        inputContainer.appendChild(percentageInput);
+        controlsContainer.appendChild(inputContainer);
+
+        // Create slider
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = "0";
+        slider.max = "100";
+        slider.value = "80";
+        slider.step = "1";
+        Object.assign(slider.style, {
+          width: "100%",
+          height: "12px",
+          background:
+            "linear-gradient(to right, #9b59b6 0%, #9b59b6 80%, #333 80%, #333 100%)",
+          outline: "none",
+          borderRadius: "6px",
+          WebkitAppearance: "none",
+        });
+
+        // Custom slider styling
+        slider.style.setProperty("--thumb-size", "22px");
+        slider.style.setProperty("--thumb-color", "#9b59b6");
+        slider.style.cssText += `
+          -webkit-appearance: none;
+          height: 12px;
+          background: linear-gradient(to right, #9b59b6 0%, #9b59b6 80%, #333 80%, #333 100%);
+          border-radius: 6px;
+          outline: none;
+          
+          &::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: var(--thumb-size);
+            height: var(--thumb-size);
+            border-radius: 50%;
+            background: var(--thumb-color);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.6);
+            border: 2px solid #fff;
+          }
+          
+          &::-moz-range-thumb {
+            width: var(--thumb-size);
+            height: var(--thumb-size);
+            border-radius: 50%;
+            background: var(--thumb-color);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.6);
+            border: 2px solid #fff;
+          }
+        `;
+
+        // Link slider and input
+        percentageInput.addEventListener("input", () => {
+          let value = Math.min(
+            100,
+            Math.max(0, parseInt(percentageInput.value) || 0)
+          );
+          slider.value = value;
+          percentageInput.value = value;
+          slider.style.background = `linear-gradient(to right, #9b59b6 0%, #9b59b6 ${value}%, #333 ${value}%, #333 100%)`;
+        });
+
+        slider.addEventListener("input", () => {
+          percentageInput.value = slider.value;
+          slider.style.background = `linear-gradient(to right, #9b59b6 0%, #9b59b6 ${slider.value}%, #333 ${slider.value}%, #333 100%)`;
+        });
+
+        controlsContainer.appendChild(slider);
+
+        // Create run button
+        const runButton = createButton("Complete Scan", "#9b59b6", () => {
+          const percentage = parseInt(percentageInput.value);
+          showNotification({
+            title: "Scan",
+            message: `Scan completed with ${percentage}% accuracy`,
+          });
+          window.localStorage.setItem("correctPercentage", percentage);
+          runScript("scripts/ReadingPlus/CompleteScan.js");
+        });
+
+        scanButtons.appendChild(runButton);
       }
 
       // Complete All button (platinum only)
       if (["platinum"].includes(Rank.toLowerCase())) {
         const completeAllSection = document.createElement("div");
-        completeAllSection.style.marginTop = "20px";
-        completeAllSection.style.paddingTop = "20px";
-        completeAllSection.style.borderTop = "1px solid #333";
+        Object.assign(completeAllSection.style, {
+          marginTop: "30px",
+          paddingTop: "30px",
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+        });
 
         const completeAllButton = createButton(
-          "Complete All",
+          "Complete All Activities",
           "#e74c3c",
           () => {
             showNotification({
               title: "Reading Plus",
-              message: "All activities completed",
+              message: "Completing all activities",
             });
-            // Actual implementation would go here
           }
         );
-        completeAllButton.style.width = "100%";
-        completeAllButton.style.padding = "12px";
-        completeAllButton.style.fontSize = "16px";
+        Object.assign(completeAllButton.style, {
+          width: "100%",
+          padding: "16px",
+          fontSize: "16px",
+          fontWeight: "700",
+        });
 
         completeAllSection.appendChild(completeAllButton);
         sectionsContainer.appendChild(completeAllSection);
@@ -660,53 +1031,65 @@ function createOverlay() {
       // Info message for unsupported ranks
       if (["bronze"].includes(Rank.toLowerCase())) {
         const info = document.createElement("div");
-        info.innerHTML = `<div style="color:#888; margin-top:20px; font-size:12px;">
-                Upgrade to higher rank for more features:
-                <ul style="margin-top:8px; padding-left:20px;">
-                    <li>Silver: Ibalance tools</li>
-                    <li>Gold: Scan tools</li>
-                    <li>Emerald: Copy Story</li>
-                    <li>Platinum: Complete All</li>
-                </ul>
-            </div>`;
+        info.innerHTML = `
+          <div style="color:#888; margin-top:30px; font-size:14px; padding:20px; background: rgba(26, 26, 26, 0.7); border-radius:10px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="color:#2e86de; font-weight:600; margin-bottom:15px; font-size:16px;">Upgrade for Premium Features</div>
+            <ul style="margin-top:15px; padding-left:0; list-style-type: none;">
+              <li style="margin-bottom:12px; display: flex; align-items: center; gap: 10px;">
+                <span style="display: inline-block; width: 24px; height: 24px; background: rgba(230, 126, 34, 0.2); border-radius: 50%; text-align: center; line-height: 24px; color: #e67e22;">S</span>
+                <span><strong style="color:#e67e22">Silver:</strong> Ibalance tools</span>
+              </li>
+              <li style="margin-bottom:12px; display: flex; align-items: center; gap: 10px;">
+                <span style="display: inline-block; width: 24px; height: 24px; background: rgba(155, 89, 182, 0.2); border-radius: 50%; text-align: center; line-height: 24px; color: #9b59b6;">G</span>
+                <span><strong style="color:#9b59b6">Gold:</strong> Scan tools</span>
+              </li>
+              <li style="margin-bottom:12px; display: flex; align-items: center; gap: 10px;">
+                <span style="display: inline-block; width: 24px; height: 24px; background: rgba(46, 204, 113, 0.2); border-radius: 50%; text-align: center; line-height: 24px; color: #2ecc71;">E</span>
+                <span><strong style="color:#2ecc71">Emerald:</strong> Copy Story</span>
+              </li>
+              <li style="display: flex; align-items: center; gap: 10px;">
+                <span style="display: inline-block; width: 24px; height: 24px; background: rgba(231, 76, 60, 0.2); border-radius: 50%; text-align: center; line-height: 24px; color: #e74c3c;">P</span>
+                <span><strong style="color:#e74c3c">Platinum:</strong> Complete All</span>
+              </li>
+            </ul>
+          </div>
+        `;
         sectionsContainer.appendChild(info);
       }
     } else {
+      // Other tabs
       const title = document.createElement("div");
       title.textContent = tab;
-      title.style.fontSize = "16px";
-      title.style.color = "#fff";
+      Object.assign(title.style, {
+        fontSize: "22px",
+        color: "#2e86de",
+        marginBottom: "20px",
+        fontWeight: "700",
+      });
 
       const msg = document.createElement("div");
-      msg.textContent = `This is the ${tab} tab. Feature coming soon!`;
+      msg.textContent = `The ${tab} features are currently in development.`;
       msg.style.color = "#aaa";
       msg.style.marginTop = "10px";
+      msg.style.fontSize = "16px";
 
-      contentPanel.appendChild(title);
-      contentPanel.appendChild(msg);
+      contentBody.appendChild(title);
+      contentBody.appendChild(msg);
     }
   }
 
-  function buttonStyle(bg) {
-    return {
-      backgroundColor: bg,
-      color: "white",
-      border: "none",
-      padding: "8px 14px",
-      fontSize: "14px",
-      cursor: "pointer",
-      borderRadius: "4px",
-    };
-  }
-
-  makeDraggable(tabPanel);
-  makeDraggable(contentPanel);
+  // Make only headers draggable
+  makeDraggable(tabPanelHeader, tabPanel);
+  makeDraggable(contentHeader, contentPanel);
 
   // === F8 toggle ===
   window.addEventListener("keydown", (e) => {
     if (e.key === "F8") {
       if (!Rank) {
-        showNotification({ title: "IjPlus", message: "No Subsription" });
+        showNotification({
+          title: "IJplus",
+          message: "No active subscription",
+        });
         return;
       }
       overlay.style.display =
@@ -717,33 +1100,85 @@ function createOverlay() {
     }
   });
 
-  // === Draggable Windows ===
-  function makeDraggable(el) {
-    let isDragging = false,
-      offsetX = 0,
-      offsetY = 0;
+  // === Improved Draggable Windows ===
+  function makeDraggable(handle, element) {
+    let isDragging = false;
+    let offsetX, offsetY;
 
-    el.addEventListener("mousedown", (e) => {
-      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "BUTTON")
-        return;
+    handle.addEventListener("mousedown", (e) => {
       isDragging = true;
-      offsetX = e.clientX - el.offsetLeft;
-      offsetY = e.clientY - el.offsetTop;
+      offsetX = e.clientX - element.offsetLeft;
+      offsetY = e.clientY - element.offsetTop;
       document.body.style.userSelect = "none";
+      element.style.cursor = "grabbing";
+      handle.style.cursor = "grabbing";
     });
 
     document.addEventListener("mousemove", (e) => {
-      if (isDragging) {
-        el.style.left = e.clientX - offsetX + "px";
-        el.style.top = e.clientY - offsetY + "px";
-      }
+      if (!isDragging) return;
+
+      element.style.left = `${e.clientX - offsetX}px`;
+      element.style.top = `${e.clientY - offsetY}px`;
     });
 
     document.addEventListener("mouseup", () => {
       isDragging = false;
       document.body.style.userSelect = "";
+      element.style.cursor = "";
+      handle.style.cursor = "";
     });
   }
+
+  // === Resize Handles ===
+  function addResizeHandle(element) {
+    const handle = document.createElement("div");
+    Object.assign(handle.style, {
+      position: "absolute",
+      bottom: "0",
+      right: "0",
+      width: "20px",
+      height: "20px",
+      cursor: "nwse-resize",
+      zIndex: "10",
+    });
+    element.appendChild(handle);
+
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+
+    handle.addEventListener("mousedown", (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = parseInt(
+        document.defaultView.getComputedStyle(element).width,
+        10
+      );
+      startHeight = parseInt(
+        document.defaultView.getComputedStyle(element).height,
+        10
+      );
+      e.preventDefault();
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isResizing) return;
+
+      const newWidth = startWidth + (e.clientX - startX);
+      const newHeight = startHeight + (e.clientY - startY);
+
+      if (newWidth > 400) element.style.width = `${newWidth}px`;
+      if (newHeight > 300) element.style.height = `${newHeight}px`;
+    });
+
+    document.addEventListener("mouseup", () => {
+      isResizing = false;
+    });
+  }
+
+  // Add resize handles
+  addResizeHandle(tabPanel);
+  addResizeHandle(contentPanel);
 
   // === Notification System ===
   let notifContainer = document.getElementById("ij-notif-container");
@@ -756,7 +1191,7 @@ function createOverlay() {
       right: "20px",
       display: "flex",
       flexDirection: "column",
-      gap: "10px",
+      gap: "15px",
       zIndex: "100000",
     });
     document.body.appendChild(notifContainer);
@@ -765,39 +1200,44 @@ function createOverlay() {
   window.showNotification = function ({ title = "IJplus", message = "" }) {
     const notif = document.createElement("div");
     Object.assign(notif.style, {
-      background: "#000",
-      color: "#0f0",
-      padding: "10px 14px",
-      border: "1px solid #0f0",
-      fontFamily: "monospace",
-      maxWidth: "300px",
+      background: "rgba(20, 20, 20, 0.8)",
+      color: "#9b59b6",
+      padding: "14px 18px",
+      border: "1px solid rgba(155, 89, 182, 0.3)",
+      fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
+      maxWidth: "320px",
       whiteSpace: "pre-wrap",
-      borderRadius: "4px",
-      boxShadow: "0 0 10px rgba(0,255,0,0.2)",
+      borderRadius: "10px",
+      boxShadow: "0 8px 25px rgba(0,0,0,0.5)",
+      backdropFilter: "blur(10px)",
+      fontSize: "14px",
+      lineHeight: "1.6",
     });
 
-    notif.innerHTML = `<b>${title}</b><br>${message}`;
+    notif.innerHTML = `<b style="font-size:15px; color:#2e86de;">${title}</b><br>${message}`;
     notifContainer.appendChild(notif);
 
     setTimeout(() => {
       notif.style.opacity = "0";
+      notif.style.transform = "translateY(20px)";
       setTimeout(() => notif.remove(), 300);
-    }, 4000);
+    }, 4500);
   };
+
   window.overlay = overlay;
 }
 
-// Run version check and initialize overlay + notification
+// Initialize
 maybeCheckVersion();
 showNotification({
-  title: "Ijplus",
-  message: `IJplus is up to date, version: ${LOCAL_VERSION}`,
+  title: "IJplus",
+  message: `IJplus v${LOCAL_VERSION} initialized`,
 });
 createOverlay();
-showNotification({ title: "Ijplus", message: "Loading Scripts" });
+showNotification({ title: "IJplus", message: "Loading scripts..." });
 if (Rank) {
   showNotification({
-    title: "Ijplus",
-    message: "IJplus Overlay initialized. Press F8 to toggle.",
+    title: "IJplus",
+    message: "Press F8 to toggle overlay • ESC to close",
   });
 }
