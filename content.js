@@ -932,7 +932,7 @@ function createOverlay() {
           percentageInput.type = "number";
           percentageInput.min = "0";
           percentageInput.max = "100";
-          percentageInput.value = "80";
+          percentageInput.value = "100";
           Object.assign(percentageInput.style, {
             width: "70px",
             padding: "8px",
@@ -963,13 +963,19 @@ function createOverlay() {
             marginBottom: "15px",
             WebkitAppearance: "none",
           });
+          function updateSliderBackground(slider) {
+            const value = slider.value;
+            slider.style.background = `linear-gradient(to right, #9b59b6 0%, #9b59b6 ${value}%, #333 ${value}%, #333 100%)`;
+          }
 
           // Link slider and input
           percentageInput.addEventListener("input", () => {
             slider.value = percentageInput.value;
+            updateSliderBackground(slider);
           });
           slider.addEventListener("input", () => {
             percentageInput.value = slider.value;
+            updateSliderBackground(slider);
           });
           scanControls.appendChild(slider);
 

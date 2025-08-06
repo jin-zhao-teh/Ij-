@@ -26,7 +26,7 @@
 
         const total = parsed.targets;
         const correct = Math.round((total * correctPercentage) / 100);
-        const incorrect = total - correct;
+        const incorrect = 0;
 
         parsed.correct = correct;
         parsed.incorrect = incorrect;
