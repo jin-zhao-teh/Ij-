@@ -23,7 +23,6 @@ chrome.runtime.sendMessage({ type: "getRank" }, (response) => {
 function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
-
 // Custom fetch implementation
 window.fetch = function (url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -234,7 +233,6 @@ const showNotification = (() => {
     showNext();
   };
 })();
-
 // Version check
 async function maybeCheckVersion() {
   const today = getToday();

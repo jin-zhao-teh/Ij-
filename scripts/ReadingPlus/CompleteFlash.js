@@ -41,3 +41,5 @@ var find = (e) => {
   }
 };
 document.addEventListener("keyup", find);
+document.dispatchEvent(spaceEvent);
+document.dispatchEvent(spaceEvent);
