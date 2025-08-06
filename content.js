@@ -958,7 +958,7 @@ function createOverlay() {
             width: "100%",
             height: "8px",
             background:
-              "linear-gradient(to right, #9b59b6 0%, #9b59b6 80%, #333 80%, #333 100%)",
+              "linear-gradient(to right, #9b59b6 0%, #9b59b6 100%, #333 100%, #333 100%)",
             borderRadius: "4px",
             marginBottom: "15px",
             WebkitAppearance: "none",
