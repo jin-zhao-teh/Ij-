@@ -953,7 +953,7 @@ function createOverlay() {
           slider.type = "range";
           slider.min = "0";
           slider.max = "100";
-          slider.value = "80";
+          slider.value = "100";
           Object.assign(slider.style, {
             width: "100%",
             height: "8px",
