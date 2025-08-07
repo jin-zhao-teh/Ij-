@@ -1296,6 +1296,22 @@ function createOverlay() {
           title: "Ludi",
           message: `Showing answer for ${mode} mode (${subtype})`,
         });
+        const stageMapping = {
+          emerging: "emg",
+          developing: "dev",
+          growing: "gro",
+          progressing: "pro",
+          advancing: "avc",
+          excelling: "exc",
+        };
+        if (mode == "normal") {
+          const ludiUrl = `https://api.ludi.nz/rest/basicfacts/result/set?stage=${
+            stageMapping[subtype.toLowerCase()]
+          }`;
+          window.localStorage.setItem("ludiUrl", ludiUrl);
+        } else {
+        }
+        runScript("scripts/Ludi/ShowAnswers.js")
         // Add your actual answer logic here
       };
 
