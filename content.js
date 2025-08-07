@@ -1179,6 +1179,179 @@ function createOverlay() {
     <div style="margin-top: 8px;">&copy; ${new Date().getFullYear()} IJplus Tools</div>
   `;
       contentBody.appendChild(versionInfo);
+    } else if (tab === "Ludi") {
+      contentBody.innerHTML = ""; // Clear existing content
+
+      // Title
+      const title = document.createElement("h2");
+      title.textContent = "Ludi Tools";
+      title.style.cssText = `
+    font-size: 22px;
+    color: #2e86de;
+    margin-bottom: 25px;
+    font-weight: 700;
+  `;
+      contentBody.appendChild(title);
+
+      // Main container
+      const container = document.createElement("div");
+      container.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  `;
+
+      // Mode selection dropdown
+      const modeLabel = document.createElement("label");
+      modeLabel.textContent = "Mode:";
+      modeLabel.style.cssText = `
+    color: #eee;
+    font-size: 15px;
+  `;
+
+      const modeSelect = document.createElement("select");
+      modeSelect.id = "ludi-mode";
+      modeSelect.style.cssText = `
+    padding: 10px;
+    border-radius: 6px;
+    background: #1e1e1e;
+    color: #fff;
+    border: 1px solid #333;
+    font-size: 14px;
+    width: 100%;
+    margin-bottom: 15px;
+  `;
+
+      // Mode options
+      const modes = [
+        { value: "normal", text: "Normal" },
+        { value: "playground", text: "Playground" },
+      ];
+
+      modes.forEach((mode) => {
+        const option = document.createElement("option");
+        option.value = mode.value;
+        option.textContent = mode.text;
+        modeSelect.appendChild(option);
+      });
+
+      // Subtype container
+      const subtypeContainer = document.createElement("div");
+      subtypeContainer.id = "ludi-subtype-container";
+      subtypeContainer.style.cssText = `
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  `;
+
+      // Subtype label
+      const subtypeLabel = document.createElement("label");
+      subtypeLabel.textContent = "Type:";
+      subtypeLabel.style.cssText = `
+    color: #eee;
+    font-size: 15px;
+  `;
+
+      // Subtype dropdown
+      const subtypeSelect = document.createElement("select");
+      subtypeSelect.id = "ludi-subtype";
+      subtypeSelect.style.cssText = `
+    padding: 10px;
+    border-radius: 6px;
+    background: #1e1e1e;
+    color: #fff;
+    border: 1px solid #333;
+    font-size: 14px;
+    width: 100%;
+  `;
+
+      // Show Answer button
+      const showAnswerBtn = document.createElement("button");
+      showAnswerBtn.textContent = "Show Answer";
+      showAnswerBtn.style.cssText = `
+    background: linear-gradient(to right, #2ecc71, #27ae60);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+    margin-top: 20px;
+  `;
+      showAnswerBtn.addEventListener("mouseover", () => {
+        showAnswerBtn.style.transform = "translateY(-2px)";
+        showAnswerBtn.style.boxShadow = "0 6px 15px rgba(0,0,0,0.4)";
+      });
+      showAnswerBtn.addEventListener("mouseout", () => {
+        showAnswerBtn.style.transform = "translateY(0)";
+        showAnswerBtn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+      });
+      showAnswerBtn.onclick = () => {
+        const mode = modeSelect.value;
+        const subtype = subtypeSelect.value;
+        showNotification({
+          title: "Ludi",
+          message: `Showing answer for ${mode} mode (${subtype})`,
+        });
+        // Add your actual answer logic here
+      };
+
+      // Mode change handler
+      modeSelect.addEventListener("change", () => {
+        const mode = modeSelect.value;
+        subtypeContainer.style.display = "flex";
+
+        // Clear existing options
+        subtypeSelect.innerHTML = "";
+
+        // Add new options based on mode
+        if (mode === "normal") {
+          const levels = [
+            "Emerging",
+            "Developing",
+            "Growing",
+            "Progressing",
+            "Advancing",
+            "Excelling",
+          ];
+          levels.forEach((level) => {
+            const option = document.createElement("option");
+            option.value = level.toLowerCase();
+            option.textContent = level;
+            subtypeSelect.appendChild(option);
+          });
+        } else if (mode === "playground") {
+          const operations = [
+            "Addition",
+            "Subtraction",
+            "Multiplication",
+            "Division",
+          ];
+          operations.forEach((op) => {
+            const option = document.createElement("option");
+            option.value = op.toLowerCase();
+            option.textContent = op;
+            subtypeSelect.appendChild(option);
+          });
+        }
+      });
+
+      // Trigger initial mode change
+      modeSelect.dispatchEvent(new Event("change"));
+
+      // Assemble the UI
+      subtypeContainer.appendChild(subtypeLabel);
+      subtypeContainer.appendChild(subtypeSelect);
+
+      container.appendChild(modeLabel);
+      container.appendChild(modeSelect);
+      container.appendChild(subtypeContainer);
+      container.appendChild(showAnswerBtn);
+
+      contentBody.appendChild(container);
     } else {
       // Other tabs
       const title = document.createElement("div");
