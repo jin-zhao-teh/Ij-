@@ -70,7 +70,121 @@ window.fetch = function (url, options = {}) {
     xhr.send(options.body || null);
   });
 };
+function createToggleSwitch(
+  text,
+  saveKey,
+  defaultState = true,
+  container = null
+) {
+  // Create container if not provided
+  const toggleContainer = container || document.createElement("div");
+  Object.assign(toggleContainer.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "15px",
+    background: "rgba(30, 30, 30, 0.7)",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    border: "1px solid rgba(255,255,255,0.1)",
+  });
 
+  // Create label
+  const toggleLabel = document.createElement("span");
+  toggleLabel.textContent = text;
+  toggleLabel.style.color = "#eee";
+  toggleLabel.style.fontSize = "15px";
+
+  // Create toggle switch
+  const toggleSwitch = document.createElement("label");
+  toggleSwitch.className = "ijplus-switch";
+  Object.assign(toggleSwitch.style, {
+    position: "relative",
+    display: "inline-block",
+    width: "50px",
+    height: "24px",
+  });
+
+  // Create slider background
+  const toggleSlider = document.createElement("span");
+  toggleSlider.className = "ijplus-slider";
+  Object.assign(toggleSlider.style, {
+    position: "absolute",
+    cursor: "pointer",
+    top: "0",
+    left: "0",
+    right: "0",
+    bottom: "0",
+    backgroundColor: "#444",
+    transition: "0.4s",
+    borderRadius: "24px",
+  });
+
+  // Create hidden checkbox input
+  const toggleInput = document.createElement("input");
+  toggleInput.type = "checkbox";
+  toggleInput.checked = defaultState;
+  Object.assign(toggleInput.style, {
+    opacity: "0",
+    width: "0",
+    height: "0",
+  });
+
+  // Create slider knob
+  const toggleKnob = document.createElement("span");
+  toggleKnob.className = "ijplus-knob";
+  Object.assign(toggleKnob.style, {
+    position: "absolute",
+    height: "16px",
+    width: "16px",
+    left: "4px",
+    bottom: "4px",
+    backgroundColor: "#fff",
+    transition: "0.4s",
+    borderRadius: "50%",
+  });
+
+  // Update visual state
+  const updateToggleState = (isChecked) => {
+    if (isChecked) {
+      toggleSlider.style.backgroundColor = "#2e86de";
+      toggleKnob.style.transform = "translateX(26px)";
+    } else {
+      toggleSlider.style.backgroundColor = "#444";
+      toggleKnob.style.transform = "translateX(0)";
+    }
+    toggleInput.checked = isChecked;
+  };
+
+  // Load saved preference
+  chrome.storage.local.get([saveKey], (result) => {
+    const isEnabled =
+      result[saveKey] !== undefined ? result[saveKey] : defaultState;
+    updateToggleState(isEnabled);
+  });
+
+  // Change handler
+  toggleInput.addEventListener("change", function () {
+    const isChecked = this.checked;
+    updateToggleState(isChecked);
+    chrome.storage.local.set({ [saveKey]: isChecked });
+  });
+
+  // Assemble components
+  toggleSwitch.appendChild(toggleInput);
+  toggleSwitch.appendChild(toggleSlider);
+  toggleSlider.appendChild(toggleKnob);
+  toggleContainer.appendChild(toggleLabel);
+  toggleContainer.appendChild(toggleSwitch);
+
+  // Return the container and input element for external access
+  return {
+    container: toggleContainer,
+    input: toggleInput,
+    setState: updateToggleState,
+    getState: () => toggleInput.checked,
+  };
+}
 // Version checking
 function checkVersionWithXHR() {
   return new Promise((resolve, reject) => {
@@ -1164,6 +1278,13 @@ function createOverlay() {
       toggleContainer.appendChild(toggleSwitch);
       contentBody.appendChild(toggleContainer);
 
+      createToggleSwitch(
+        "Show loading Notifications",
+        "ijplus-show-loading-notifications",
+        true,
+        toggleContainer
+      );
+
       // === Version Info ===
       const versionInfo = document.createElement("div");
       Object.assign(versionInfo.style, {
@@ -1542,15 +1663,22 @@ function createOverlay() {
 }
 
 // Initialize
-showNotification({
-  title: "IJplus",
-  message: `IJplus v${LOCAL_VERSION} initialized`,
-});
-createOverlay();
-showNotification({ title: "IJplus", message: "Loading scripts..." });
-if (Rank) {
+const showLoadingNotifcations = window.localStorage.getItem(
+  "ijplus-show-loading-notifications"
+);
+if (showLoadingNotifcations) {
   showNotification({
     title: "IJplus",
-    message: "Press F8 to toggle overlay • ESC to close",
+    message: `IJplus v${LOCAL_VERSION} initialized`,
   });
+}
+createOverlay();
+if (showLoadingNotifcations) {
+  showNotification({ title: "IJplus", message: "Loading scripts..." });
+  if (Rank) {
+    showNotification({
+      title: "IJplus",
+      message: "Press F8 to toggle overlay • ESC to close",
+    });
+  }
 }
