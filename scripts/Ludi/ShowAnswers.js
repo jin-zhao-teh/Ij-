@@ -50,7 +50,7 @@
                 return Math.cbrt(q.left);
               }
             } else {
-              return Math.pow(q.right, q.left);
+              return Math.pow(q.left, q.right);
             }
           default:
             return "Unknown operation" + q.operation;
