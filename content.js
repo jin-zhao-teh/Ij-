@@ -1663,22 +1663,33 @@ function createOverlay() {
 }
 
 // Initialize
-const showLoadingNotifcations = window.localStorage.getItem(
-  "ijplus-show-loading-notifications"
-);
-if (showLoadingNotifcations) {
-  showNotification({
-    title: "IJplus",
-    message: `IJplus v${LOCAL_VERSION} initialized`,
-  });
-}
-createOverlay();
-if (showLoadingNotifcations) {
-  showNotification({ title: "IJplus", message: "Loading scripts..." });
-  if (Rank) {
-    showNotification({
-      title: "IJplus",
-      message: "Press F8 to toggle overlay • ESC to close",
-    });
+chrome.storage.local.get(
+  ["ijplus-show-loading-notifications"],
+  function (result) {
+    const showLoadingNotifications =
+      result["ijplus-show-loading-notifications"] !== false; // Default to true
+
+    if (showLoadingNotifications) {
+      showNotification({
+        title: "IJplus",
+        message: `IJplus v${LOCAL_VERSION} initialized`,
+      });
+    }
+
+    createOverlay();
+
+    if (showLoadingNotifications) {
+      showNotification({
+        title: "IJplus",
+        message: "Loading scripts...",
+      });
+
+      if (Rank) {
+        showNotification({
+          title: "IJplus",
+          message: "Press F8 to toggle overlay • ESC to close",
+        });
+      }
+    }
   }
-}
+);
