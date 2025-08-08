@@ -12,11 +12,13 @@ function isNewerVersion(latest, current) {
   }
   return false;
 }
-
+const oldFetch = window.fetch;
 // Get user rank
 chrome.runtime.sendMessage({ type: "getRank" }, (response) => {
   if (response && response.result) {
     Rank = response.result;
+  } else {
+    console.error("Failed to get rank:", response);
   }
 });
 
@@ -1311,7 +1313,7 @@ function createOverlay() {
           window.localStorage.setItem("ludiUrl", ludiUrl);
         } else {
         }
-        runScript("scripts/Ludi/ShowAnswers.js")
+        runScript("scripts/Ludi/ShowAnswers.js");
         // Add your actual answer logic here
       };
 
@@ -1540,7 +1542,6 @@ function createOverlay() {
 }
 
 // Initialize
-maybeCheckVersion();
 showNotification({
   title: "IJplus",
   message: `IJplus v${LOCAL_VERSION} initialized`,
